@@ -32,17 +32,27 @@ public:
     void run();
 
 private:
-    // -----=====<<<<<_METHODS_>>>>>=====-----
+    // -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
 
     // main 3 steps of program
     void init();
     void mainLoop();
     void cleanup();
 
-    // Vulkan setup functions
-    void createDevice();
+    // init sub-functions
+    void initSDL();
+    void initVulkan();
 
-    // -----=====<<<<<_VARIABLES_>>>>>=====-----
+    // vulkan init sub-functions
+    void createVkDevice();
+
+    // Main loop sub-functions
+    void handleEvents();
+
+    // Vulkan utility
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
+      
+    // -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
 
     // state variables
     bool running_ = false;
