@@ -4,7 +4,7 @@
 -----~~~~~=====<<<<<{_ONLY_PUBLIC_METHOD_}>>>>>=====~~~~~-----
 */
 void Engine::run() {
-    std::cout << "running engine\n";
+    log(__func__, "running engine");
 
     init();
     mainLoop();
@@ -14,8 +14,9 @@ void Engine::run() {
 /*
 -----~~~~~=====<<<<<{_MAIN_CONTROL_FLOW_METHODS_}>>>>>=====~~~~~-----
 */
+// run once on startup, initializes the program
 void Engine::init() {
-    std::cout << "initializing engine\n";
+    log(__func__, "initializing engine");
     
     // init vulkan/SDL
     initSDL();
@@ -24,8 +25,9 @@ void Engine::init() {
 
 }
 
+// executes repeatedly until a stop event is detected
 void Engine::mainLoop() {
-    std::cout << "executing engine main loop\n";
+    log(__func__, "executing engine main loop");
 
     running_ = true;
     while (running_) {
@@ -41,20 +43,43 @@ void Engine::mainLoop() {
 }
 
 void Engine::cleanup() {
-    std::cout << "cleaning up engine\n";
+    log(__func__, "cleaning up engine");
+
+    // Devices/instance
+    log(__func__, "destroying logical device");
+    vkDestroyDevice(device_, nullptr);
+
+    log(__func__, "destroying surface");
+    vkDestroySurfaceKHR(instance_, surface_, nullptr);
+
+    if (enableValidationLayers) {
+        log(__func__, "destroying debug messenger");
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkDestroyDebugUtilsMessengerEXT");
+        if (func != nullptr) {
+            func(instance_, debugMessenger_, nullptr);
+        }
+    }
+
+    log(__func__, "destroying Vulkan instance");
+    vkDestroyInstance(instance_, nullptr);
+
+    // SDL
+    log(__func__, "cleaning up SDL");
+    SDL_DestroyWindow(windowPtr_);
+    SDL_Quit();
 }
 
 /*
 -----~~~~~=====<<<<<{_SUB_INITIALIZATION_METHODS_}>>>>>=====~~~~~-----
 */
 void Engine::initSDL() {
-    std::cout << "initializing SDL\n";
+    log(__func__, "initializing SDL");
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         throw std::runtime_error("failed to initialize SDL");
     }
 
-    // TODO ADD COOL ICON
+    log(__func__, "creating SDL window");
     windowPtr_ = SDL_CreateWindow("SPRITE_SEER", WIDTH, HEIGHT, SDL_WINDOW_VULKAN);
     if (!windowPtr_) {
         throw std::runtime_error("failed to create SDL window");
@@ -69,17 +94,42 @@ void Engine::initSDL() {
         throw std::runtime_error("failed to put mouse into relative mode");
     }
     */
+
+    // ADD COOL ICON FOR WINDOW
+    int imgWidth, imgHeight, imgChannels;
+    stbi_uc* pixels = stbi_load("../res/icon/icon.jpg", &imgWidth, &imgHeight, &imgChannels, STBI_rgb_alpha);
+
+    if (!pixels) {
+        std::cout << "unable to load icon image: -> " << stbi_failure_reason() << "\n";
+        throw std::runtime_error("failed to load window icon image");
+    }
+
+
+    SDL_Surface* surfaceIcon = nullptr;
+    surfaceIcon = SDL_CreateSurfaceFrom(imgWidth, imgHeight, SDL_PIXELFORMAT_RGBA32, pixels, imgWidth*4);
+
+    if (!surfaceIcon) {
+        throw std::runtime_error("failed to create cool icon SDL surface");
+    }
+
+    log(__func__, "setting SDL window icon");
+    if (!SDL_SetWindowIcon(windowPtr_, surfaceIcon)) {
+        throw std::runtime_error("failed to set cool window icon");
+    }
+
+    stbi_image_free(pixels);
+    SDL_DestroySurface(surfaceIcon);
 }
 
 void Engine::initVulkan() {
-    std::cout << "initializing Vulkan\n";
+    log(__func__, "initializing Vulkan");
 
     createVkDevice();
 
 }
 
 void Engine::createVkDevice() {
-    std::cout << "creating Vulkan device\n";
+    log(__func__, "creating Vulkan device");
 
     // Vulkan instance --------------------====<
     // validation layer check
@@ -117,7 +167,6 @@ void Engine::createVkDevice() {
 
     // get extensions (SDL):
     std::vector<const char*> extensions;
-
     uint32_t sdl_extension_count = 0;
     const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extension_count);
     for (uint32_t i = 0; i < sdl_extension_count; i++) {
@@ -136,17 +185,7 @@ void Engine::createVkDevice() {
     if (enableValidationLayers) {
         instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         instanceCreateInfo.ppEnabledLayerNames = validationLayers.data();
-
-        // populate debug stuff
-        debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        debugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        debugCreateInfo.pfnUserCallback = debugCallback;
-
+        populateDebugMessengerCreateInfo(debugCreateInfo);
         instanceCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
     }
     else {
@@ -155,32 +194,40 @@ void Engine::createVkDevice() {
     }
 
     // INSTANCE CREATE CALL HERE
+    log(__func__, "creating vulkan instance");
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance_) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
 
-    /*
     // Vulkan debug layer --------------------====<
     // setup debug messager if in debug mode
     if (enableValidationLayers) {
-        util::log(name_, "setting up debug messenger");
-        VkDebugUtilsMessengerCreateInfoEXT createInfo;
-        util::populateDebugMessengerCreateInfo(createInfo);
+        VkDebugUtilsMessengerCreateInfoEXT messengerCreateInfo;
+        populateDebugMessengerCreateInfo(messengerCreateInfo);
 
-        if (util::CreateDebugUtilsMessengerEXT(instance_, &createInfo, nullptr, &debugMessenger_) != VK_SUCCESS) {
+        VkResult checkResult;
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
+        if (func != nullptr) {
+            log(__func__, "creating vulkan debug utils messenger");
+            checkResult = func(instance_, &messengerCreateInfo, nullptr, &debugMessenger_);
+        }
+        else {
+            checkResult = VK_ERROR_EXTENSION_NOT_PRESENT;
+        }
+
+        if (checkResult != VK_SUCCESS) {
             throw std::runtime_error("failed to set up debug messenger!");
         }
     }
 
     // Vulkan/SDL surface --------------------====<
-    util::log(name_, "creating surface");
-    if (!SDL_Vulkan_CreateSurface(window_, instance_, nullptr, &surface_)) {
+    log(__func__, "creating SDL/Vulkan window surface");
+    if (!SDL_Vulkan_CreateSurface(windowPtr_, instance_, nullptr, &surface_)) {
         throw std::runtime_error("failed to create SDL window surface!");
     }
 
     // TODO: print device selected to logger!!!!
     // Vulkan physical device (GPU) --------------------====<
-    util::log(name_, "selecting physical device");
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance_, &deviceCount, nullptr);
 
@@ -192,7 +239,8 @@ void Engine::createVkDevice() {
     vkEnumeratePhysicalDevices(instance_, &deviceCount, devices.data());
 
     for (const auto& device : devices) {
-        if (util::isDeviceSuitable(device, surface_, deviceExtensions)) {
+        if (isDeviceSuitable(device, surface_, deviceExtensions)) {
+            log(__func__, "selected vulkan physical device");
             physicalDevice_ = device;
             break;
         }
@@ -203,8 +251,7 @@ void Engine::createVkDevice() {
     }
 
     // Vulkan LOGICAL Device --------------------====<
-    util::log(name_, "creating logical device");
-    QueueFamilyIndices indices = util::findQueueFamilies(physicalDevice_, surface_);
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice_, surface_);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {
@@ -222,7 +269,6 @@ void Engine::createVkDevice() {
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    util::log(name_, "checking vulkan device features");
     VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamicState3Features = {};
     dynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
 
@@ -262,16 +308,24 @@ void Engine::createVkDevice() {
         deviceCreateInfo.enabledLayerCount = 0;
     }
 
+    log(__func__, "creating vulkan logical device");
     if (vkCreateDevice(physicalDevice_, &deviceCreateInfo, nullptr, &device_) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
 
-    util::log(name_, "getting device queues");
     vkGetDeviceQueue(device_, indices.graphicsFamily.value(), 0, &graphicsQueue_);
     vkGetDeviceQueue(device_, indices.presentFamily.value(), 0, &presentQueue_);
-    */
 }
 
+/*
+-----~~~~~=====<<<<<{_GENERAL_UTILITY_METHODS_}>>>>>=====~~~~~-----
+*/
+void Engine::log(const std::string& src, const std::string& msg) {
+    // thread safe 
+    std::stringstream output;
+    output << "[" << src << "]: " << msg << "\n";
+    std::cout << output.str();
+}
 
 /*
 -----~~~~~=====<<<<<{_VULKAN_HELPER_METHODS_}>>>>>=====~~~~~-----
@@ -281,6 +335,108 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Engine::debugCallback(VkDebugUtilsMessageSeverity
     return VK_FALSE;
 }
 
+void Engine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+    createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.pfnUserCallback = debugCallback;
+}
+
+bool Engine::isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) {
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+
+    bool extensionsSupported = checkDeviceExtensionSupport(physicalDevice, deviceExtensions);
+
+    bool swapChainAdequate = false;
+    if (extensionsSupported) {
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
+        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+    }
+
+    VkPhysicalDeviceFeatures supportedFeatures;
+    vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
+
+    return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+}
+
+QueueFamilyIndices Engine::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
+    QueueFamilyIndices indices;
+
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+
+    int i = 0;
+    for (const auto& queueFamily : queueFamilies) {
+        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            indices.graphicsFamily = i;
+        }
+
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+
+        if (presentSupport) {
+            indices.presentFamily = i;
+        }
+
+        if (indices.isComplete()) {
+            break;
+        }
+
+        i++;
+    }
+
+    return indices;
+}
+
+SwapChainSupportDetails Engine::querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
+    SwapChainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+
+    if (formatCount != 0) {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data());
+    }
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+
+    if (presentModeCount != 0) {
+        details.presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, details.presentModes.data());
+    }
+
+    return details;
+}
+
+bool Engine::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char*>& deviceExtensions) {
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+    for (const auto& extension : availableExtensions) {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
+
 /*
 -----~~~~~=====<<<<<{_SUB_MAIN_LOOP_METHODS_}>>>>>=====~~~~~-----
 */
@@ -289,7 +445,7 @@ void Engine::handleEvents() {
     while (SDL_PollEvent(&event_)) {
         switch (event_.type) {
         case SDL_EVENT_QUIT:
-            std::cout << "quit event happened\n";
+            log(__func__, "quit event happened");
             running_ = false;
             break;
         }

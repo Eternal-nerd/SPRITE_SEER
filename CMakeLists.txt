@@ -22,7 +22,8 @@ set(SOURCES
 # add headers
 set(HEADERS
     src/engine.h
-	#lib/stb_image.h
+	src/types.h
+	lib/stb_image.h
 	#lib/tiny_obj_loader.h
 )
 
