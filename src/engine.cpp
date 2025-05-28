@@ -45,6 +45,9 @@ void Engine::mainLoop() {
 void Engine::cleanup() {
     log(__func__, "cleaning up engine");
 
+    log(__func__, "destroying command pool");
+    vkDestroyCommandPool(device_, commandPool_, nullptr);
+
     // Devices/instance
     log(__func__, "destroying logical device");
     vkDestroyDevice(device_, nullptr);
@@ -125,7 +128,7 @@ void Engine::initVulkan() {
     log(__func__, "initializing Vulkan");
 
     createVkDevice();
-
+    createVkCommandBuffers();
 }
 
 void Engine::createVkDevice() {
@@ -287,16 +290,12 @@ void Engine::createVkDevice() {
         throw std::runtime_error("needed features not enabled on chosen device");
     }
 
-
     VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-
     deviceCreateInfo.pNext = &physicalFeatures2;
     deviceCreateInfo.pEnabledFeatures = NULL;
-
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
@@ -315,6 +314,33 @@ void Engine::createVkDevice() {
 
     vkGetDeviceQueue(device_, indices.graphicsFamily.value(), 0, &graphicsQueue_);
     vkGetDeviceQueue(device_, indices.presentFamily.value(), 0, &presentQueue_);
+}
+
+void Engine::createVkCommandBuffers() {
+    QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice_, surface_);
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+
+    log(__func__, "creating vulkan command pool");
+    if (vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create graphics command pool!");
+    }
+
+    commandBuffers_.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool_;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = (uint32_t)commandBuffers_.size();
+
+    log(__func__, "allocating vulkan command buffers");
+    if (vkAllocateCommandBuffers(device_, &allocInfo, commandBuffers_.data()) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate command buffers!");
+    }
 }
 
 /*
@@ -429,6 +455,7 @@ bool Engine::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const 
 
     std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
+    // making sure the device extensions are in the availiable extensions
     for (const auto& extension : availableExtensions) {
         requiredExtensions.erase(extension.extensionName);
     }

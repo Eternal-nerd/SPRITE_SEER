@@ -52,6 +52,7 @@ private:
 
     // vulkan init sub-functions
     void createVkDevice();
+    void createVkCommandBuffers();
 
     // Main loop sub-functions
     void handleEvents();
@@ -89,6 +90,10 @@ private:
 	VkQueue graphicsQueue_ = VK_NULL_HANDLE;
 	VkQueue presentQueue_ = VK_NULL_HANDLE;
 
+    // Vulkan command buffers --------------------===<
+    VkCommandPool commandPool_ = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> commandBuffers_;
+    uint32_t currentFrame_ = 0;
     
 
 };
