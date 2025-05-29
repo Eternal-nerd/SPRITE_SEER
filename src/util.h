@@ -1,9 +1,12 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
 
 #include <iostream>
+#include <set>
 #include <sstream>
 
+#include "types.h"
 
 // General utility
 void log(const std::string& src, const std::string& msg);

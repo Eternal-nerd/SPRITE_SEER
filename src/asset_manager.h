@@ -8,7 +8,7 @@
 class AssetManager {
 public:
 
-	void init(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue);
+	//void init(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue);
 
 private:
 	// vk access

@@ -13,12 +13,12 @@ void log(const std::string& src, const std::string& msg) {
 /*
 -----~~~~~=====<<<<<{_VULKAN_HELPER_METHODS_}>>>>>=====~~~~~-----
 */
-VKAPI_ATTR VkBool32 VKAPI_CALL Engine::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
     std::cerr << "[Vulkan validation layer]: " << pCallbackData->pMessage << "\n";
     return VK_FALSE;
 }
 
-void Engine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
+void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -30,7 +30,7 @@ void Engine::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT
     createInfo.pfnUserCallback = debugCallback;
 }
 
-bool Engine::isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) {
+bool isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions) {
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
 
     bool extensionsSupported = checkDeviceExtensionSupport(physicalDevice, deviceExtensions);
@@ -47,7 +47,7 @@ bool Engine::isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surf
     return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-QueueFamilyIndices Engine::findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
+QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
@@ -79,7 +79,7 @@ QueueFamilyIndices Engine::findQueueFamilies(VkPhysicalDevice physicalDevice, Vk
     return indices;
 }
 
-SwapChainSupportDetails Engine::querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
+SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
     SwapChainSupportDetails details;
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
@@ -103,7 +103,7 @@ SwapChainSupportDetails Engine::querySwapChainSupport(VkPhysicalDevice physicalD
     return details;
 }
 
-bool Engine::checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char*>& deviceExtensions) {
+bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char*>& deviceExtensions) {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
 
