@@ -45,6 +45,9 @@ void Engine::mainLoop() {
 void Engine::cleanup() {
     log(__func__, "cleaning up engine");
 
+    log(__func__, "cleaning up asset manager");
+    assetManager_.cleanup();
+
     log(__func__, "destroying command pool");
     vkDestroyCommandPool(device_, commandPool_, nullptr);
 
@@ -103,7 +106,7 @@ void Engine::initSDL() {
     stbi_uc* pixels = stbi_load("../res/icon/icon.jpg", &imgWidth, &imgHeight, &imgChannels, STBI_rgb_alpha);
 
     if (!pixels) {
-        std::cout << "unable to load icon image: -> " << stbi_failure_reason() << "\n";
+        std::cout << "unable to load icon image: " << stbi_failure_reason() << "\n";
         throw std::runtime_error("failed to load window icon image");
     }
 
@@ -346,7 +349,8 @@ void Engine::createVkCommandBuffers() {
 }
 
 void Engine::createVkTextures() {
-
+    log(__func__, "initializing asset manager");
+    assetManager_.init(physicalDevice_, device_, commandPool_, graphicsQueue_);
 
 
 }

@@ -25,7 +25,6 @@ set(SOURCES
 # add headers
 set(HEADERS
     src/engine.h
-	src/types.h
 	src/util.h
 	src/asset_manager.h
 	src/texture.h

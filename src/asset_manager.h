@@ -2,13 +2,15 @@
 
 #include <vulkan/vulkan.h>
 
+#include "util.h"
 #include "texture.h"
-
 
 class AssetManager {
 public:
 
-	//void init(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue);
+	void init(VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue);
+
+    void cleanup();
 
 private:
 	// vk access

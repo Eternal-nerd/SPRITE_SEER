@@ -14,7 +14,6 @@
 #include <stdexcept>
 
 // includes from project
-#include "types.h"
 #include "util.h"
 #include "asset_manager.h"
 

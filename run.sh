@@ -1,2 +1,3 @@
 cmake --build build
-./bin/SPRITE_SEER
+cd bin/
+./SPRITE_SEER
