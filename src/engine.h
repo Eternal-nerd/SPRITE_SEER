@@ -12,10 +12,12 @@
 #include <vector>
 #include <set>
 #include <stdexcept>
-#include <sstream>
 
 // includes from project
 #include "types.h"
+#include "util.h"
+#include "asset_manager.h"
+
 
 // debug vs release global variables
 #ifdef NDEBUG
@@ -53,28 +55,19 @@ private:
     // vulkan init sub-functions
     void createVkDevice();
     void createVkCommandBuffers();
+    void createVkTextures();
 
     // Main loop sub-functions
     void handleEvents();
-
-    // General utility
-    void log(const std::string& src, const std::string& msg);
-
-    // Vulkan utility
-    // debug
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
-    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-    // physical device selection
-    bool isDeviceSuitable(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, const std::vector<const char*>& deviceExtensions);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char*>& deviceExtensions);
 
     // -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
 
     // state variables
     bool running_ = false;
     bool visible_ = true;
+
+    // asset manager
+    AssetManager assetManager_;
 
     // SDL objects
     SDL_Window* windowPtr_ = nullptr;

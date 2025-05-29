@@ -17,12 +17,19 @@ include_directories(${SDL3_INCLUDE_DIRS})
 set(SOURCES
 	src/main.cpp
     src/engine.cpp
+	src/util.cpp
+	src/asset_manager.cpp
+	src/texture.cpp
 )
 
 # add headers
 set(HEADERS
     src/engine.h
 	src/types.h
+	src/util.h
+	src/asset_manager.h
+	src/texture.h
+
 	lib/stb_image.h
 	#lib/tiny_obj_loader.h
 )
