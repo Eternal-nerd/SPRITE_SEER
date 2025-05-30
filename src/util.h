@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../lib/stb_image.h"
+
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 

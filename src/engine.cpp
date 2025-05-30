@@ -4,7 +4,7 @@
 -----~~~~~=====<<<<<{_ONLY_PUBLIC_METHOD_}>>>>>=====~~~~~-----
 */
 void Engine::run() {
-    log(__func__, "running engine");
+    log(name_ + __func__, "running engine");
 
     init();
     mainLoop();
@@ -16,7 +16,7 @@ void Engine::run() {
 */
 // run once on startup, initializes the program
 void Engine::init() {
-    log(__func__, "initializing engine");
+    log(name_ + __func__, "initializing engine");
     
     // init vulkan/SDL
     initSDL();
@@ -27,7 +27,7 @@ void Engine::init() {
 
 // executes repeatedly until a stop event is detected
 void Engine::mainLoop() {
-    log(__func__, "executing engine main loop");
+    log(name_ + __func__, "executing engine main loop");
 
     running_ = true;
     while (running_) {
@@ -43,34 +43,34 @@ void Engine::mainLoop() {
 }
 
 void Engine::cleanup() {
-    log(__func__, "cleaning up engine");
+    log(name_ + __func__, "cleaning up engine");
 
-    log(__func__, "cleaning up asset manager");
+    log(name_ + __func__, "cleaning up asset manager");
     assetManager_.cleanup();
 
-    log(__func__, "destroying command pool");
+    log(name_ + __func__, "destroying command pool");
     vkDestroyCommandPool(device_, commandPool_, nullptr);
 
     // Devices/instance
-    log(__func__, "destroying logical device");
+    log(name_ + __func__, "destroying logical device");
     vkDestroyDevice(device_, nullptr);
 
-    log(__func__, "destroying surface");
+    log(name_ + __func__, "destroying surface");
     vkDestroySurfaceKHR(instance_, surface_, nullptr);
 
     if (enableValidationLayers) {
-        log(__func__, "destroying debug messenger");
+        log(name_ + __func__, "destroying debug messenger");
         auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkDestroyDebugUtilsMessengerEXT");
         if (func != nullptr) {
             func(instance_, debugMessenger_, nullptr);
         }
     }
 
-    log(__func__, "destroying Vulkan instance");
+    log(name_ + __func__, "destroying Vulkan instance");
     vkDestroyInstance(instance_, nullptr);
 
     // SDL
-    log(__func__, "cleaning up SDL");
+    log(name_ + __func__, "cleaning up SDL");
     SDL_DestroyWindow(windowPtr_);
     SDL_Quit();
 }
@@ -79,13 +79,13 @@ void Engine::cleanup() {
 -----~~~~~=====<<<<<{_SUB_INITIALIZATION_METHODS_}>>>>>=====~~~~~-----
 */
 void Engine::initSDL() {
-    log(__func__, "initializing SDL");
+    log(name_ + __func__, "initializing SDL");
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         throw std::runtime_error("failed to initialize SDL");
     }
 
-    log(__func__, "creating SDL window");
+    log(name_ + __func__, "creating SDL window");
     windowPtr_ = SDL_CreateWindow("SPRITE_SEER", WIDTH, HEIGHT, SDL_WINDOW_VULKAN);
     if (!windowPtr_) {
         throw std::runtime_error("failed to create SDL window");
@@ -118,17 +118,17 @@ void Engine::initSDL() {
         throw std::runtime_error("failed to create cool icon SDL surface");
     }
 
-    log(__func__, "setting SDL window icon");
+    log(name_ + __func__, "setting SDL window icon");
     if (!SDL_SetWindowIcon(windowPtr_, surfaceIcon)) {
         throw std::runtime_error("failed to set cool window icon");
     }
 
-    stbi_image_free(pixels);
+    //stbi_image_free(pixels);
     SDL_DestroySurface(surfaceIcon);
 }
 
 void Engine::initVulkan() {
-    log(__func__, "initializing Vulkan");
+    log(name_ + __func__, "initializing Vulkan");
 
     createVkDevice();
     createVkCommandBuffers();
@@ -137,7 +137,7 @@ void Engine::initVulkan() {
 }
 
 void Engine::createVkDevice() {
-    log(__func__, "creating Vulkan device");
+    log(name_ + __func__, "creating Vulkan device");
 
     // Vulkan instance --------------------====<
     // validation layer check
@@ -202,7 +202,7 @@ void Engine::createVkDevice() {
     }
 
     // INSTANCE CREATE CALL HERE
-    log(__func__, "creating vulkan instance");
+    log(name_ + __func__, "creating vulkan instance");
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance_) != VK_SUCCESS) {
         throw std::runtime_error("failed to create instance!");
     }
@@ -216,7 +216,7 @@ void Engine::createVkDevice() {
         VkResult checkResult;
         auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT");
         if (func != nullptr) {
-            log(__func__, "creating vulkan debug utils messenger");
+            log(name_ + __func__, "creating vulkan debug utils messenger");
             checkResult = func(instance_, &messengerCreateInfo, nullptr, &debugMessenger_);
         }
         else {
@@ -229,7 +229,7 @@ void Engine::createVkDevice() {
     }
 
     // Vulkan/SDL surface --------------------====<
-    log(__func__, "creating SDL/Vulkan window surface");
+    log(name_ + __func__, "creating SDL/Vulkan window surface");
     if (!SDL_Vulkan_CreateSurface(windowPtr_, instance_, nullptr, &surface_)) {
         throw std::runtime_error("failed to create SDL window surface!");
     }
@@ -248,7 +248,7 @@ void Engine::createVkDevice() {
 
     for (const auto& device : devices) {
         if (isDeviceSuitable(device, surface_, deviceExtensions)) {
-            log(__func__, "selected vulkan physical device");
+            log(name_ + __func__, "selected vulkan physical device");
             physicalDevice_ = device;
             break;
         }
@@ -312,7 +312,7 @@ void Engine::createVkDevice() {
         deviceCreateInfo.enabledLayerCount = 0;
     }
 
-    log(__func__, "creating vulkan logical device");
+    log(name_ + __func__, "creating vulkan logical device");
     if (vkCreateDevice(physicalDevice_, &deviceCreateInfo, nullptr, &device_) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
@@ -329,7 +329,7 @@ void Engine::createVkCommandBuffers() {
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-    log(__func__, "creating vulkan command pool");
+    log(name_ + __func__, "creating vulkan command pool");
     if (vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool_) != VK_SUCCESS) {
         throw std::runtime_error("failed to create graphics command pool!");
     }
@@ -342,14 +342,13 @@ void Engine::createVkCommandBuffers() {
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = (uint32_t)commandBuffers_.size();
 
-    log(__func__, "allocating vulkan command buffers");
+    log(name_ + __func__, "allocating vulkan command buffers");
     if (vkAllocateCommandBuffers(device_, &allocInfo, commandBuffers_.data()) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
 
 void Engine::createVkTextures() {
-    log(__func__, "initializing asset manager");
     assetManager_.init(physicalDevice_, device_, commandPool_, graphicsQueue_);
 
 
@@ -363,7 +362,7 @@ void Engine::handleEvents() {
     while (SDL_PollEvent(&event_)) {
         switch (event_.type) {
         case SDL_EVENT_QUIT:
-            log(__func__, "quit event happened");
+            log(name_ + __func__, "quit event happened");
             running_ = false;
             break;
         }

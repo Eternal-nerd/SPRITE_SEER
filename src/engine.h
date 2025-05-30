@@ -4,7 +4,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
-#include "../lib/stb_image.h"
 
 // standard library includes
 #include <iostream>
@@ -17,12 +16,12 @@
 #include "util.h"
 #include "asset_manager.h"
 
-
 // main class for the whole program
 class Engine {
 public:
     void run();
 
+    const std::string name_ = "engine ";
 private:
     // -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
 
