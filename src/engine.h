@@ -21,10 +21,9 @@ class Engine {
 public:
     void run();
 
-    const std::string name_ = "engine ";
+    const std::string name_ = "Engine::";
 private:
     // -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
-
     // main 3 steps of program
     void init();
     void mainLoop();
@@ -37,13 +36,21 @@ private:
     // vulkan init sub-functions
     void createVkDevice();
     void createVkCommandBuffers();
-    void createVkTextures();
+    void createVkRenderPass();
+	void createVkSwapchain();
+	void createVkDescriptors();
+	void createVkGraphicsPipeline();
+	void createVkSyncObjects();
+	void createVkUniformBuffers();
+
+	// swapchain helpers
+	void recreateVkSwapchain();
+	void cleanupVkSwapchain();
 
     // Main loop sub-functions
     void handleEvents();
 
     // -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
-
     // state variables
     bool running_ = false;
     bool visible_ = true;
@@ -67,8 +74,43 @@ private:
 
     // Vulkan command buffers --------------------===<
     VkCommandPool commandPool_ = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> commandBuffers_;
+	std::vector<VkCommandBuffer> commandBuffers_{};
     uint32_t currentFrame_ = 0;
-    
 
+	// Vulkan Renderpass ------------------------==<
+	VkRenderPass renderPass_ = VK_NULL_HANDLE;
+
+	// Vulkan Swapchain -----------------------===<
+	VkSwapchainKHR swapChain_ = VK_NULL_HANDLE;
+	std::vector<VkImage> swapChainImages_{};
+	VkFormat swapChainImageFormat_ = VK_FORMAT_UNDEFINED;
+	VkExtent2D swapChainExtent_{};
+	std::vector<VkImageView> swapChainImageViews_{};
+	std::vector<VkFramebuffer> swapChainFramebuffers_{};
+	VkImage depthImage_ = VK_NULL_HANDLE;
+	VkDeviceMemory depthImageMemory_ = VK_NULL_HANDLE;
+	VkImageView depthImageView_ = VK_NULL_HANDLE;
+	uint32_t imageIndex_ = 0;
+
+	// Vulkan descriptor layout & pipeline --------------------===<
+	VkDescriptorSetLayout descriptorSetLayout_ = VK_NULL_HANDLE;
+	VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
+	VkPipeline graphicsPipeline_ = VK_NULL_HANDLE;
+
+	// Vulkan synchronization ------------------------===<
+	std::vector<VkSemaphore> imageAvailableSemaphores_{};
+	std::vector<VkSemaphore> renderFinishedSemaphores_{};
+	std::vector<VkFence> inFlightFences_{};
+
+	// UBO ----------------------------------------===<
+	std::vector<VkBuffer> uniformBuffers_{};
+	std::vector<VkDeviceMemory> uniformBuffersMemory_{};
+	std::vector<void*> uniformBuffersMapped_{};
+
+	// Descriptor pool/sets ---------------------------======<
+	VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
+	std::vector<VkDescriptorSet> descriptorSets_{};
+
+	// EXTERNAL Vulkan API function ptrs
+	PFN_vkCmdSetPolygonModeEXT vkCmdSetPolygonModeEXT{ VK_NULL_HANDLE };
 };

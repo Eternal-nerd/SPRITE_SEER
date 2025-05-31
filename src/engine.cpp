@@ -45,8 +45,43 @@ void Engine::mainLoop() {
 void Engine::cleanup() {
     log(name_ + __func__, "cleaning up engine");
 
+    // swapchain
+    cleanupVkSwapchain();
+
     log(name_ + __func__, "cleaning up asset manager");
     assetManager_.cleanup();
+
+    // pipeline & layout
+    log(name_ + __func__, "destroying graphics pipeline");
+    vkDestroyPipeline(device_, graphicsPipeline_, nullptr);
+    log(name_ + __func__, "destroying pipeline layout");
+    vkDestroyPipelineLayout(device_, pipelineLayout_, nullptr);
+
+    // render pass
+    log(name_ + __func__, "destroying render pass");
+    vkDestroyRenderPass(device_, renderPass_, nullptr);
+
+    // UBO
+    log(name_ + __func__, "destroying uniform buffers");
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        //vkDestroyBuffer(device_, uniformBuffers_[i], nullptr);
+        //vkFreeMemory(device_, uniformBuffersMemory_[i], nullptr);
+    }
+
+    // descriptor stuff
+    log(name_ + __func__, "destroying descriptor pool");
+    vkDestroyDescriptorPool(device_, descriptorPool_, nullptr);
+
+    log(name_ + __func__, "destroying descriptor set layout");
+    vkDestroyDescriptorSetLayout(device_, descriptorSetLayout_, nullptr);
+
+    // snyc stuff
+    log(name_ + __func__, "destroying semaphores and fences");
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        //vkDestroySemaphore(device_, renderFinishedSemaphores_[i], nullptr);
+        //vkDestroySemaphore(device_, imageAvailableSemaphores_[i], nullptr);
+        //vkDestroyFence(device_, inFlightFences_[i], nullptr);
+    }
 
     log(name_ + __func__, "destroying command pool");
     vkDestroyCommandPool(device_, commandPool_, nullptr);
@@ -132,8 +167,14 @@ void Engine::initVulkan() {
 
     createVkDevice();
     createVkCommandBuffers();
-    createVkTextures();
-
+    // creates the textures
+    assetManager_.init(physicalDevice_, device_, commandPool_, graphicsQueue_);
+    createVkRenderPass();
+    createVkSwapchain();
+    createVkDescriptors();
+    createVkGraphicsPipeline();
+    createVkSyncObjects();
+    createVkUniformBuffers();
 }
 
 void Engine::createVkDevice() {
@@ -348,11 +389,232 @@ void Engine::createVkCommandBuffers() {
     }
 }
 
-void Engine::createVkTextures() {
-    assetManager_.init(physicalDevice_, device_, commandPool_, graphicsQueue_);
+void Engine::createVkRenderPass() {
+    log(name_ + __func__, "creating renderpass");
 
+    // get some swapchain details here:
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice_, surface_);
+
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = chooseSwapSurfaceFormat(swapChainSupport.formats).format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = findDepthFormat(physicalDevice_);
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+    std::array<VkAttachmentDescription, 2> attachments = {
+        colorAttachment,
+        depthAttachment
+    };
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
+
+    if (vkCreateRenderPass(device_, &renderPassInfo, nullptr, &renderPass_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create render pass!");
+    }
+}
+
+void Engine::createVkSwapchain() {
+    log(name_ + __func__, "creating swapchain");
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice_, surface_);
+    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+    VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+    VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, windowPtr_);
+
+    uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+    if (swapChainSupport.capabilities.maxImageCount > 0 &&
+        imageCount > swapChainSupport.capabilities.maxImageCount) {
+        imageCount = swapChainSupport.capabilities.maxImageCount;
+    }
+
+    VkSwapchainCreateInfoKHR swapCreateInfo{};
+    swapCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapCreateInfo.surface = surface_;
+
+    swapCreateInfo.minImageCount = imageCount;
+    swapCreateInfo.imageFormat = surfaceFormat.format;
+    swapCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
+    swapCreateInfo.imageExtent = extent;
+    swapCreateInfo.imageArrayLayers = 1;
+    swapCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice_, surface_);
+    uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+    if (indices.graphicsFamily != indices.presentFamily) {
+        swapCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapCreateInfo.queueFamilyIndexCount = 2;
+        swapCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
+    }
+    else {
+        swapCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    swapCreateInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+    swapCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapCreateInfo.presentMode = presentMode;
+    swapCreateInfo.clipped = VK_TRUE;
+
+    if (vkCreateSwapchainKHR(device_, &swapCreateInfo, nullptr, &swapChain_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create swap chain!");
+    }
+
+    vkGetSwapchainImagesKHR(device_, swapChain_, &imageCount, nullptr);
+    swapChainImages_.resize(imageCount);
+    vkGetSwapchainImagesKHR(device_, swapChain_, &imageCount, swapChainImages_.data());
+
+    swapChainImageFormat_ = surfaceFormat.format;
+    swapChainExtent_ = extent;
+
+    // IMAGE VIEWS ----------------------------=====<
+    log(name_ + __func__, "creating swapchain image views");
+    swapChainImageViews_.resize(swapChainImages_.size());
+
+    for (uint32_t i = 0; i < swapChainImages_.size(); i++) {
+        swapChainImageViews_[i] = createImageView(
+            swapChainImages_[i],
+            swapChainImageFormat_,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            device_
+        );
+    }
+
+    // DEPTH RESOURCES --------------------================<
+    log(name_ + __func__, "creating depth resources");
+    VkFormat depthFormat = findDepthFormat(physicalDevice_);
+
+    createImage(
+        swapChainExtent_.width,
+        swapChainExtent_.height,
+        depthFormat,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        depthImage_,
+        depthImageMemory_,
+        device_,
+        physicalDevice_
+    );
+
+    depthImageView_ = createImageView(
+        depthImage_,
+        depthFormat,
+        VK_IMAGE_ASPECT_DEPTH_BIT,
+        device_
+    );
+
+    // FRAMEBUFFERS -------------------------===<
+    log(name_ + __func__, "creating framebuffers");
+    swapChainFramebuffers_.resize(swapChainImageViews_.size());
+
+    for (size_t i = 0; i < swapChainImageViews_.size(); i++) {
+        std::array<VkImageView, 2> attachments = { swapChainImageViews_[i], depthImageView_ };
+
+        VkFramebufferCreateInfo framebufferInfo{};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass_;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+        framebufferInfo.pAttachments = attachments.data();
+        framebufferInfo.width = swapChainExtent_.width;
+        framebufferInfo.height = swapChainExtent_.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(device_, &framebufferInfo, nullptr, &swapChainFramebuffers_[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create framebuffer!");
+        }
+    }
+}
+
+void Engine::createVkDescriptors() {
+    log(name_ + __func__, "creating descriptor set layout");
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.pImmutableSamplers = nullptr;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = static_cast<uint32_t>(assetManager_.getTextureCount());
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    if (vkCreateDescriptorSetLayout(device_, &layoutInfo, nullptr, &descriptorSetLayout_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout!");
+    }
+
+    // do the rest of the descriptor stuff here
 
 }
+
+void Engine::createVkGraphicsPipeline() {
+    log(name_ + __func__, "creating graphics pipeline");
+
+    //VkShaderModule vertShaderModule = createShaderModule("../shaders/compiled/main_vert.spv", device_);
+    //VkShaderModule fragShaderModule = createShaderModule("../shaders/compiled/main_frag.spv", device_);
+
+}
+
+void Engine::createVkSyncObjects() {
+    log(name_ + __func__, "creating vulkan sync objects");
+}
+
+void Engine::createVkUniformBuffers() {
+    log(name_ + __func__, "creating vulkan uniform buffers");
+}
+
 
 /*
 -----~~~~~=====<<<<<{_SUB_MAIN_LOOP_METHODS_}>>>>>=====~~~~~-----
@@ -367,4 +629,42 @@ void Engine::handleEvents() {
             break;
         }
     }
+}
+
+void Engine::recreateVkSwapchain() {
+    log(name_ + __func__, "recreating swapchain");
+    vkDeviceWaitIdle(device_);
+    cleanupVkSwapchain();
+    createVkSwapchain();
+    log(name_ + __func__, "new swapchain extent: ["
+        + std::to_string(swapChainExtent_.width)
+        + ", "
+        + std::to_string(swapChainExtent_.height)
+        + "]"
+    );
+}
+
+/*
+-----~~~~~=====<<<<<{_SUB_CLEANUP_METHODS_}>>>>>=====~~~~~-----
+*/
+void Engine::cleanupVkSwapchain() {
+    log(name_ + __func__, "cleaning up swapchain");
+
+    log(name_ + __func__, "destroying swapchain depth resources");
+    vkDestroyImageView(device_, depthImageView_, nullptr);
+    vkDestroyImage(device_, depthImage_, nullptr);
+    vkFreeMemory(device_, depthImageMemory_, nullptr);
+
+    log(name_ + __func__, "destroying swapchain frame buffers");
+    for (auto framebuffer : swapChainFramebuffers_) {
+        vkDestroyFramebuffer(device_, framebuffer, nullptr);
+    }
+
+    log(name_ + __func__, "destroying swapchain image views");
+    for (auto imageView : swapChainImageViews_) {
+        vkDestroyImageView(device_, imageView, nullptr);
+    }
+
+    log(name_ + __func__, "destroying swapchain");
+    vkDestroySwapchainKHR(device_, swapChain_, nullptr);
 }

@@ -8,22 +8,24 @@
 
 class Texture {
 public:
-	void create();
+	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
+	void create(const std::string& filename, VkPhysicalDevice physicalDevice, VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue);
 
-	//const VkImageView& getTextureImageView() const;
-	//const VkSampler& getTextureSampler() const;
-	int getIndex();
+	const VkImageView& getImageView() const;
+	const VkSampler& getSampler() const;
 
 	void destroy();
 
-	const std::string name_ = "texture ";
+	// -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
+	const std::string name_ = "Texture::";
 
 private:
+	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
+	//
+
+	// -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
 	// name of picture file
 	const char* filename_;
-	
-	// index of texture in list
-	int index_ = -1;
 
 	// references to vk stuff
 	VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
@@ -32,10 +34,8 @@ private:
 	VkQueue graphicsQueue_ = VK_NULL_HANDLE;
 
 	// TEXTURE STUFF
-	VkImage textureImage_ = VK_NULL_HANDLE;
-	VkDeviceMemory textureImageMemory_ = VK_NULL_HANDLE;
-	VkImageView textureImageView_ = VK_NULL_HANDLE;
-	VkSampler textureSampler_ = VK_NULL_HANDLE;
-	VkImageLayout imageLayout_ = VK_IMAGE_LAYOUT_UNDEFINED;
-
+	VkImage image_ = VK_NULL_HANDLE;
+	VkDeviceMemory imageMemory_ = VK_NULL_HANDLE;
+	VkImageView imageView_ = VK_NULL_HANDLE;
+	VkSampler sampler_ = VK_NULL_HANDLE;
 };
