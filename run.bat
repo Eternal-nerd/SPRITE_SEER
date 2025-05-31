@@ -1,2 +1,6 @@
 cmake --build build
-bin\Debug\SPRITE_SEER.exe
+echo "compiling shaders"
+cd shaders/
+compile.bat
+cd ..
+bin\SPRITE_SEER.exe

@@ -29,10 +29,59 @@ const bool enableValidationLayers = true;
 const uint32_t WIDTH = 1600;
 const uint32_t HEIGHT = 800;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_QUADS = 2048;
+const int MAX_LINES = 256;
 
 const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME };
 
 const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
+
+// vertex data structure
+struct Vertex {
+    glm::vec2 pos;
+    glm::vec2 texCoord;
+    int texIndex;
+    int interaction;
+
+    static VkVertexInputBindingDescription getBindingDescription() {
+        VkVertexInputBindingDescription bindingDescription{};
+        bindingDescription.binding = 0;
+        bindingDescription.stride = sizeof(Vertex);
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        return bindingDescription;
+    }
+
+    static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
+        std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
+
+        attributeDescriptions[0].binding = 0;
+        attributeDescriptions[0].location = 0;
+        attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+        attributeDescriptions[1].binding = 0;
+        attributeDescriptions[1].location = 1;
+        attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescriptions[1].offset = offsetof(Vertex, texCoord);
+
+        attributeDescriptions[2].binding = 0;
+        attributeDescriptions[2].location = 2;
+        attributeDescriptions[2].format = VK_FORMAT_R32_SINT;
+        attributeDescriptions[2].offset = offsetof(Vertex, texIndex);
+
+        attributeDescriptions[3].binding = 0;
+        attributeDescriptions[3].location = 3;
+        attributeDescriptions[3].format = VK_FORMAT_R32_SINT;
+        attributeDescriptions[3].offset = offsetof(Vertex, interaction);
+
+        return attributeDescriptions;
+    }
+
+    bool operator==(const Vertex& other) const {
+        return pos == other.pos && texCoord == other.texCoord && texIndex == other.texIndex && other.interaction == other.interaction;
+    }
+};
 
 // Used for Vulkan device selection
 struct QueueFamilyIndices {

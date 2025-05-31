@@ -14,7 +14,7 @@ void log(const std::string& src, const std::string& msg) {
 -----~~~~~=====<<<<<{_VULKAN_HELPER_METHODS_}>>>>>=====~~~~~-----
 */
 VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-    std::cerr << "[Vulkan validation layer]: " << pCallbackData->pMessage << "\n";
+    std::cerr << "[VULKAN_VALIDATION_LAYER]: " << pCallbackData->pMessage << "\n";
     return VK_FALSE;
 }
 
