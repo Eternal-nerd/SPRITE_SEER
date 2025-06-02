@@ -66,6 +66,8 @@ private:
     // state variables
     bool running_ = false;
     bool visible_ = true;
+    float fpsTime_ = 0.f;
+	int loopsMeasured_ = 0;
 
     // asset manager
     AssetManager assetManager_;

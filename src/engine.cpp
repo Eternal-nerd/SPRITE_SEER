@@ -27,10 +27,14 @@ void Engine::init() {
 // executes repeatedly until a stop event is detected
 void Engine::mainLoop() {
     log(name_ + __func__, "executing engine main loop");
+    
+    std::chrono::time_point<std::chrono::high_resolution_clock> loopStart = std::chrono::high_resolution_clock::now();
 
     running_ = true;
     while (running_) {
-
+        auto startTime = std::chrono::high_resolution_clock::now();
+	    float frameStart = std::chrono::duration<float, std::chrono::seconds::period>(startTime - loopStart).count();
+ 
         handleEvents();
         stepSimulation();
         updateBuffers();
@@ -41,8 +45,21 @@ void Engine::mainLoop() {
         }
         
         // FIXME slow it down
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "------------FRAME-----------------\n";
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //std::cout << "------------FRAME-----------------\n";
+        auto endTime = std::chrono::high_resolution_clock::now();
+	    float frameEnd = std::chrono::duration<float, std::chrono::seconds::period>(endTime - loopStart).count();
+
+        fpsTime_ += frameEnd - frameStart;
+        loopsMeasured_++;
+
+        if (loopsMeasured_ > FPS_MEASURE_INTERVAL) {
+            float fps = 1 / (fpsTime_ / FPS_MEASURE_INTERVAL);
+            log(name_ + __func__, "FPS: " + std::to_string(fps));
+            fpsTime_ = 0.f;
+            loopsMeasured_ = 0;
+        }
+    
     }
 
     vkDeviceWaitIdle(device_);

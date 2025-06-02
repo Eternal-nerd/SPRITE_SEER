@@ -26,6 +26,7 @@ const bool enableValidationLayers = true;
 #endif
 
 // misc. global variables
+const int FPS_MEASURE_INTERVAL = 500;
 const uint32_t WIDTH = 1600;
 const uint32_t HEIGHT = 800;
 const int MAX_FRAMES_IN_FLIGHT = 2;
