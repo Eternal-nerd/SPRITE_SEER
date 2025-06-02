@@ -11,6 +11,8 @@
 #include <vector>
 #include <set>
 #include <stdexcept>
+#include <thread>
+#include <chrono>
 
 // includes from project
 #include "util.h"
@@ -54,6 +56,10 @@ private:
 	void updateBuffers(); // updating buffers with new vertex data based on sim (MAYBE USE UNIFORM BUFFER INSTEAD??)
 	void renderWorld(); // makes vk command buffer, draws everything, submits command buffer
 
+	// render world sub functions
+	VkCommandBuffer setupVkCommandBuffer();
+	void drawCalls(VkCommandBuffer commandBuffer);
+	void submitVkCommandBuffer(VkCommandBuffer commandBuffer);
 
 
     // -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
@@ -125,6 +131,7 @@ private:
 	VkPipelineLayout pipelineLayout_ = VK_NULL_HANDLE;
 	VkPipelineCache pipelineCache_ = VK_NULL_HANDLE;
 	VkPipeline graphicsPipeline_ = VK_NULL_HANDLE;
+	VkPolygonMode currentPolygonMode_ = VK_POLYGON_MODE_FILL;
 
 	// Vulkan synchronization ------------------------===<
 	std::vector<VkSemaphore> imageAvailableSemaphores_{};

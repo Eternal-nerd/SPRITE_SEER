@@ -40,6 +40,9 @@ void Engine::mainLoop() {
             renderWorld();
         }
         
+        // FIXME slow it down
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::cout << "------------FRAME-----------------\n";
     }
 
     vkDeviceWaitIdle(device_);
@@ -845,7 +848,88 @@ void Engine::createVkUniformBuffers() {
 }
 
 void Engine::generateWorld() {
-    log(name_ + __func__, "generating world (TODO)");
+    log(name_ + __func__, "generating world");
+
+    // FIXME
+    // used to move the buffer access pointers along..
+    int offset = 0;
+
+    indexCount_ = 0;
+    int vertexCount = 0;
+
+    // triangle buffer
+    if (vkMapMemory(device_, vertexBufferMemory_, 0, VK_WHOLE_SIZE, 0, (void**)&vertexMapped_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to map vertex buffer memory for overlay update ");
+    }
+
+    assert(vertexMapped_ != nullptr);
+
+    // map test square
+    std::vector<Vertex> vertices{};
+    vertices.resize(4);
+    vertices[0].pos.x = 0;
+    vertices[0].pos.y = 0;
+    vertices[0].texCoord.x = 0;
+    vertices[0].texCoord.y = 0;
+    vertices[0].texIndex = 1;
+
+    vertices[1].pos.x = 0;
+    vertices[1].pos.y = 0.5;
+    vertices[1].texCoord.x = 0;
+    vertices[1].texCoord.y = 1;
+    vertices[1].texIndex = 1;
+
+    vertices[2].pos.x = 0.5;
+    vertices[2].pos.y = 0;
+    vertices[2].texCoord.x = 1;
+    vertices[2].texCoord.y = 0;
+    vertices[2].texIndex = 1;
+
+    vertices[3].pos.x = 0.5;
+    vertices[3].pos.y = 0.5;
+    vertices[3].texCoord.x = 1;
+    vertices[3].texCoord.y = 1;
+    vertices[3].texIndex = 1;
+
+    for (int i = 0; i < vertices.size(); i++) {
+        vertexMapped_->pos.x = vertices[i].pos.x; // position x
+        vertexMapped_->pos.y = vertices[i].pos.y; // position y
+        vertexMapped_->texCoord.x = vertices[i].texCoord.x; // tex coord x
+        vertexMapped_->texCoord.y = vertices[i].texCoord.y; // tex coord y
+        vertexMapped_->texIndex = vertices[i].texIndex; // tex index
+        vertexMapped_++;
+        vertexCount++;
+    }
+
+    // points should be divisible by 4 no remainder
+    if (vertexCount % 4 != 0) {
+        throw std::runtime_error("overlay pointCount not divisible by 4, pointCount % 4 = " + std::to_string(vertexCount % 4));
+    }
+
+    // vertex buffer
+    vkUnmapMemory(device_, vertexBufferMemory_);
+    vertexMapped_ = nullptr;
+
+    // INDEX MAPPING ---------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+    // populate index buffer
+    if (vkMapMemory(device_, indexBufferMemory_, 0, VK_WHOLE_SIZE, 0, (void**)&indexMapped_) != VK_SUCCESS) {
+        throw std::runtime_error("failed to map index buffer memory for overlay update ");
+    }
+
+    assert(indexMapped_ != nullptr);
+
+    std::vector<int> indices = { 0,1,2,2,1,3 };
+    for (int i = 0; i < vertexCount / 4; i++) {
+        for (int j = 0; j < indices.size(); j++) {
+            *indexMapped_ = (indices[j] + (4 * i));
+            indexMapped_++;
+            indexCount_++;
+        }
+    }
+
+    vkUnmapMemory(device_, indexBufferMemory_);
+    indexMapped_ = nullptr;
 }
 
 /*
@@ -881,11 +965,157 @@ void Engine::stepSimulation() {
 }
 
 void Engine::updateBuffers() {
+    // wait for frame to be ready before mapping buffers?
+    vkWaitForFences(device_, 1, &inFlightFences_[currentFrame_], VK_TRUE, UINT64_MAX);
+
+    VkResult result = vkAcquireNextImageKHR(device_, swapChain_, UINT64_MAX, imageAvailableSemaphores_[currentFrame_], VK_NULL_HANDLE, &imageIndex_);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        recreateVkSwapchain();
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    // update buffers here
 
 }
 
 void Engine::renderWorld() {
+    VkCommandBuffer commandBuffer = setupVkCommandBuffer();
 
+    // draw buffers
+    drawCalls(commandBuffer);
+
+    submitVkCommandBuffer(commandBuffer);
+}
+
+VkCommandBuffer Engine::setupVkCommandBuffer() {
+    // create next command buffer
+    VkCommandBuffer commandBuffer = commandBuffers_[currentFrame_];
+
+    vkResetFences(device_, 1, &inFlightFences_[currentFrame_]);
+
+    vkResetCommandBuffer(commandBuffer, 0);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass_;
+    renderPassInfo.framebuffer = swapChainFramebuffers_[imageIndex_];
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = swapChainExtent_;
+
+    // TODO fuck with this
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    clearValues[1].depthStencil = { 1.0f, 0 };
+
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline_);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float)swapChainExtent_.width;
+    viewport.height = (float)swapChainExtent_.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = swapChainExtent_;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // Set polygon mode and line width
+    vkCmdSetPolygonModeEXT(commandBuffer, currentPolygonMode_);
+
+    return commandBuffer;
+}
+
+void Engine::drawCalls(VkCommandBuffer commandBuffer) {
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline_);
+
+    // Set polygon mode and line width
+    vkCmdSetPolygonModeEXT(commandBuffer, currentPolygonMode_);
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_, 0, 1, &descriptorSet_, 0, NULL);
+
+    VkDeviceSize offsets = 0;
+
+    // DRAW TRIANGLES
+    vkCmdSetPrimitiveTopology(commandBuffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer_, &offsets);
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffer_, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indexCount_), 1, 0, 0, 0);
+
+    // DRAW LINES
+    vkCmdSetPrimitiveTopology(commandBuffer, VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &lineVertexBuffer_, &offsets);
+    vkCmdDraw(commandBuffer, static_cast<uint32_t>(linePointCount_), 1, 0, 0);
+}
+
+void Engine::submitVkCommandBuffer(VkCommandBuffer commandBuffer) {
+    vkCmdEndRenderPass(commandBuffer);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to record command buffer!");
+    }
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitSemaphores[] = { imageAvailableSemaphores_[currentFrame_] };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphores_[currentFrame_] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(graphicsQueue_, 1, &submitInfo, inFlightFences_[currentFrame_]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to submit draw command buffer!");
+    }
+
+    // PRESENT ----------------------------------------======================<
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { swapChain_ };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+
+    presentInfo.pImageIndices = &imageIndex_;
+
+    VkResult result = vkQueuePresentKHR(presentQueue_, &presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        recreateVkSwapchain();
+    }
+    else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+
+    currentFrame_ = (currentFrame_ + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 /*
