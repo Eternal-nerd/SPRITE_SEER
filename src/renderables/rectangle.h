@@ -9,6 +9,8 @@ public:
 
 	int map(Vertex* mapped);
 
+	void 
+
 	void destroy();
 
 	// utility
