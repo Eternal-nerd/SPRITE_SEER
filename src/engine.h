@@ -69,6 +69,8 @@ private:
     float fpsTime_ = 0.f;
 	int loopsMeasured_ = 0;
 
+	GameState state_{};
+
     // asset manager
     AssetManager assetManager_;
 

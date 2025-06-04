@@ -7,7 +7,9 @@
 #include <SDL3/SDL.h>
 
 #include <optional>
+#include <string>
 #include <vector>
+#include <stdexcept>
 #include <array>
 #include <algorithm>
 
@@ -32,6 +34,9 @@ const uint32_t HEIGHT = 800;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 const int MAX_QUADS = 2048;
 const int MAX_LINES = 256;
+const int UNIT_PIXELS = 10;
+
+// GAME VARIABLES
 
 const std::vector<const char*> deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME };
 
@@ -98,6 +103,40 @@ struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
+};
+
+// for filtering sprites to be shown
+typedef enum GameScreens {
+    MENU = 0,
+    GAMEPLAY = 1,
+    END = 2,
+} GameScreens;
+
+// state variables for the whole program
+struct GameState {
+    bool initialized = false;
+
+    GameScreens currentScreen;
+    VkExtent2D extent;
+    float spriteScale = 1.f;
+
+    // mouse stuff
+    bool mouseDown = false;
+    glm::vec2 mousePos = { 0.f,0.f };
+    glm::vec2 oldMousePos = { 0.f,0.f };
+
+    bool updatedTri = true;
+    bool updatedLine = true;
+};
+
+// state variables for one specific element
+struct SpriteState {
+
+    GameScreens screen;
+    int interaction = 0;
+    bool hovered = false;
+    bool wireframe = false;
+
 };
 
 // -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
