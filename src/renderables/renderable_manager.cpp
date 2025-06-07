@@ -34,7 +34,7 @@ void RenderableManager::generateWorld() {
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 int RenderableManager::mapAll(Vertex* mapped) {
-	log(name_ + __func__, "Mapping everything to the buffer");
+	//log(name_ + __func__, "Mapping everything to the buffer");
 
 	int offset = 0;
 	int vertexCount = 0;
