@@ -110,7 +110,18 @@ typedef enum GameScreens {
     MENU = 0,
     GAMEPLAY = 1,
     END = 2,
+    NONE = 3,
 } GameScreens;
+
+struct KeyState {
+    bool w = false;
+    bool a = false;
+    bool s = false;
+    bool d = false;
+    bool space = false;
+    bool shift = false;
+    bool ctrl = false;
+};
 
 // state variables for the whole program
 struct GameState {
@@ -125,18 +136,13 @@ struct GameState {
     glm::vec2 mousePos = { 0.f,0.f };
     glm::vec2 oldMousePos = { 0.f,0.f };
 
-    bool updatedTri = true;
-    bool updatedLine = true;
-};
+    // keys
+    KeyState keys{};
 
-// state variables for one specific element
-struct SpriteState {
+    bool needTriangleRemap = true;
+    bool needLineRemap = true;
 
-    GameScreens screen;
-    int interaction = 0;
-    bool hovered = false;
-    bool wireframe = false;
-
+    int wireframeTextureIndex = -1;
 };
 
 // -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----

@@ -17,6 +17,7 @@
 // includes from project
 #include "util.h"
 #include "asset_manager.h"
+#include "renderables/renderable_manager.h"
 
 // main class for the whole program
 class Engine {
@@ -34,7 +35,6 @@ private:
     // init sub-functions
     void initSDL();
     void initVulkan();
-	void generateWorld(); // creates sprites and environment
 
     // vulkan init sub-functions
     void createVkDevice();
@@ -52,7 +52,8 @@ private:
 
     // Main loop sub-functions
     void handleEvents(); // input handling step
-	void stepSimulation(); // simulation update step
+	void handleKeyEvent();
+	void waitForFrame();
 	void updateBuffers(); // updating buffers with new vertex data based on sim (MAYBE USE UNIFORM BUFFER INSTEAD??)
 	void renderWorld(); // makes vk command buffer, draws everything, submits command buffer
 
@@ -69,10 +70,14 @@ private:
     float fpsTime_ = 0.f;
 	int loopsMeasured_ = 0;
 
+	// game state
 	GameState state_{};
-
+	
     // asset manager
     AssetManager assetManager_;
+
+	// game object manager
+	RenderableManager renderableManager_;
 
     // SDL objects
     SDL_Window* windowPtr_ = nullptr;

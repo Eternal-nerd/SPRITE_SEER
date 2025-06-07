@@ -1,33 +1,34 @@
 #pragma once
 
 #include "../util.h"
+#include "../asset_manager.h"
+#include "rectangle.h"
+#include "player.h"
 
-class Player {
+
+class RenderableManager {
 public:
 	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
-	void init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercent, int textureIndex);
+	void init(GameState& gameState, AssetManager& assetManager);
 
-	int map(Vertex* mapped);
+	int mapAll(Vertex* mapped);
 
-	// utility
 	void scale();
 	void onKey();
 
 	void cleanup();
 
 	// -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
-	const std::string name_ = "Player::";
+	const std::string name_ = "RenderableManager::";
 
 private:
 	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
+	void generateWorld();
 
 	// -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
-	std::array<Vertex, 4> vertices_{};
-
 	GameState* gameState_ = nullptr;
+	AssetManager* assetManager_ = nullptr;
 
-	int textureIndex_ = -1;
-	glm::vec2 position_ = { 0.f, 0.f };
-	glm::vec2 sizePercent_ = { 0.f, 0.f };
-
+	Player player_;
+	std::vector<Rectangle> rectangles_{};
 };

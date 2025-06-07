@@ -20,6 +20,10 @@ set(SOURCES
 	src/util.cpp
 	src/asset_manager.cpp
 	src/texture.cpp
+
+	src/renderables/renderable_manager.cpp
+	src/renderables/rectangle.cpp
+	src/renderables/player.cpp
 )
 
 # add headers
@@ -28,6 +32,10 @@ set(HEADERS
 	src/util.h
 	src/asset_manager.h
 	src/texture.h
+
+	src/renderables/renderable_manager.h
+	src/renderables/rectangle.h
+	src/renderables/player.h
 
 	lib/stb_image.h
 	#lib/tiny_obj_loader.h

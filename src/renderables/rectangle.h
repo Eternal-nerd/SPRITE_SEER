@@ -1,20 +1,19 @@
 #pragma once
 
-#include "util.h"
+#include "../util.h"
 
 class Rectangle {
 public:
 	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
-	void create(OverlayState& state, OverlayElementState* elementState, const std::string& id, glm::vec2 position, glm::vec2 sizeUnits, const std::string& textureName);
+	void create(GameState& gameState, GameScreens screen, bool collidable, const std::string& id, glm::vec2 position, glm::vec2 sizePercent, int textureIndex);
 
 	int map(Vertex* mapped);
 
-	void 
+	// utility
+	//bool isHovered();
+	void scale();
 
 	void destroy();
-
-	// utility
-	bool isHovered();
 
 	// -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
 	std::string id_ = "";
@@ -25,15 +24,15 @@ private:
 	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
 
 	// -----~~~~~=====<<<<<{_VARIABLES_}>>>>>=====~~~~~-----
-	std::array<Vertex, 4> vertices{};
+	std::array<Vertex, 4> vertices_{};
 
-	bool unique_ = false;
+	GameScreens screen_ = NONE;
+	bool collidable_ = false;
 
 	GameState* gameState_ = nullptr;
-	SpriteState* spriteState_ = nullptr;
 
+	int textureIndex_ = -1;
 	glm::vec2 position_ = { 0.f, 0.f };
-	// units -> pixels defined in utils.h
-	glm::vec2 sizeUnits_ = { 0.f, 0.f };
+	glm::vec2 sizePercent_ = { 0.f, 0.f };
 
 };

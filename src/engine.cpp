@@ -21,7 +21,17 @@ void Engine::init() {
     // init vulkan/SDL
     initSDL();
     initVulkan();
-    generateWorld();
+
+    // init gamestate
+    state_.currentScreen = MENU;
+    state_.extent = swapChainExtent_;
+    state_.initialized = true;
+    state_.spriteScale = 1.f;
+    state_.wireframeTextureIndex = assetManager_.getTextureIndex("../res/img/png/green.png");
+
+    // init renderables
+    renderableManager_.init(state_, assetManager_);
+
 }
 
 // executes repeatedly until a stop event is detected
@@ -36,7 +46,7 @@ void Engine::mainLoop() {
 	    float frameStart = std::chrono::duration<float, std::chrono::seconds::period>(startTime - loopStart).count();
  
         handleEvents();
-        stepSimulation();
+        waitForFrame();
         updateBuffers();
 
         if (visible_) {
@@ -70,6 +80,9 @@ void Engine::cleanup() {
 
     // swapchain
     cleanupVkSwapchain();
+
+    log(name_ + __func__, "cleaning up renderable manager");
+    renderableManager_.cleanup();
 
     log(name_ + __func__, "cleaning up asset manager");
     assetManager_.cleanup();
@@ -864,91 +877,6 @@ void Engine::createVkUniformBuffers() {
     log(name_ + __func__, "FYI: these are not being created this function is EMPTY");
 }
 
-void Engine::generateWorld() {
-    log(name_ + __func__, "generating world");
-
-    // FIXME
-    // used to move the buffer access pointers along..
-    int offset = 0;
-
-    indexCount_ = 0;
-    int vertexCount = 0;
-
-    // triangle buffer
-    if (vkMapMemory(device_, vertexBufferMemory_, 0, VK_WHOLE_SIZE, 0, (void**)&vertexMapped_) != VK_SUCCESS) {
-        throw std::runtime_error("failed to map vertex buffer memory for overlay update ");
-    }
-
-    assert(vertexMapped_ != nullptr);
-
-    // map test square
-    std::vector<Vertex> vertices{};
-    vertices.resize(4);
-    vertices[0].pos.x = 0;
-    vertices[0].pos.y = 0;
-    vertices[0].texCoord.x = 0;
-    vertices[0].texCoord.y = 0;
-    vertices[0].texIndex = 1;
-
-    vertices[1].pos.x = 0;
-    vertices[1].pos.y = 0.5;
-    vertices[1].texCoord.x = 0;
-    vertices[1].texCoord.y = 1;
-    vertices[1].texIndex = 1;
-
-    vertices[2].pos.x = 0.5;
-    vertices[2].pos.y = 0;
-    vertices[2].texCoord.x = 1;
-    vertices[2].texCoord.y = 0;
-    vertices[2].texIndex = 1;
-
-    vertices[3].pos.x = 0.5;
-    vertices[3].pos.y = 0.5;
-    vertices[3].texCoord.x = 1;
-    vertices[3].texCoord.y = 1;
-    vertices[3].texIndex = 1;
-
-    for (int i = 0; i < vertices.size(); i++) {
-        vertexMapped_->pos.x = vertices[i].pos.x; // position x
-        vertexMapped_->pos.y = vertices[i].pos.y; // position y
-        vertexMapped_->texCoord.x = vertices[i].texCoord.x; // tex coord x
-        vertexMapped_->texCoord.y = vertices[i].texCoord.y; // tex coord y
-        vertexMapped_->texIndex = vertices[i].texIndex; // tex index
-        vertexMapped_++;
-        vertexCount++;
-    }
-
-    // points should be divisible by 4 no remainder
-    if (vertexCount % 4 != 0) {
-        throw std::runtime_error("overlay pointCount not divisible by 4, pointCount % 4 = " + std::to_string(vertexCount % 4));
-    }
-
-    // vertex buffer
-    vkUnmapMemory(device_, vertexBufferMemory_);
-    vertexMapped_ = nullptr;
-
-    // INDEX MAPPING ---------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-    // populate index buffer
-    if (vkMapMemory(device_, indexBufferMemory_, 0, VK_WHOLE_SIZE, 0, (void**)&indexMapped_) != VK_SUCCESS) {
-        throw std::runtime_error("failed to map index buffer memory for overlay update ");
-    }
-
-    assert(indexMapped_ != nullptr);
-
-    std::vector<int> indices = { 0,1,2,2,1,3 };
-    for (int i = 0; i < vertexCount / 4; i++) {
-        for (int j = 0; j < indices.size(); j++) {
-            *indexMapped_ = (indices[j] + (4 * i));
-            indexMapped_++;
-            indexCount_++;
-        }
-    }
-
-    vkUnmapMemory(device_, indexBufferMemory_);
-    indexMapped_ = nullptr;
-}
-
 /*
 -----~~~~~=====<<<<<{_SUB_MAIN_LOOP_METHODS_}>>>>>=====~~~~~-----
 */
@@ -960,8 +888,44 @@ void Engine::handleEvents() {
             log(name_ + __func__, "quit event happened");
             running_ = false;
             break;
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+            handleKeyEvent();
+            break;
         }
     }
+}
+
+void Engine::handleKeyEvent() {
+    // KEY INPUT
+    bool down = event_.type == SDL_EVENT_KEY_DOWN;
+    switch (event_.key.scancode) {
+    case SDL_SCANCODE_W:
+        state_.keys.w = down;
+        break;
+    case SDL_SCANCODE_A:
+        state_.keys.a = down;
+        break;
+    case SDL_SCANCODE_S:
+        state_.keys.s = down;
+        break;
+    case SDL_SCANCODE_D:
+        state_.keys.d = down;
+        break;
+    case SDL_SCANCODE_SPACE:
+        state_.keys.space = down;
+        break;
+    case SDL_SCANCODE_LSHIFT:
+        state_.keys.shift = down;
+        break;
+    case SDL_SCANCODE_LCTRL:
+        state_.keys.ctrl = down;
+        break;
+    default: break;
+    }
+
+    // now do stuff?
+    renderableManager_.onKey();
 }
 
 void Engine::recreateVkSwapchain() {
@@ -975,13 +939,12 @@ void Engine::recreateVkSwapchain() {
         + std::to_string(swapChainExtent_.height)
         + "]"
     );
+    // update game state
+    state_.extent = swapChainExtent_;
+    renderableManager_.scale();
 }
 
-void Engine::stepSimulation() {
-    
-}
-
-void Engine::updateBuffers() {
+void Engine::waitForFrame() {
     // wait for frame to be ready before mapping buffers?
     vkWaitForFences(device_, 1, &inFlightFences_[currentFrame_], VK_TRUE, UINT64_MAX);
 
@@ -993,9 +956,56 @@ void Engine::updateBuffers() {
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
+}
 
-    // update buffers here
+void Engine::updateBuffers() {
+    // update buffers here ------------------------<<<<<<<<<<<<<<<<
+    if (state_.needTriangleRemap) {
+        indexCount_ = 0;
+        int vertexCount = 0;
 
+        // triangle buffer
+        if (vkMapMemory(device_, vertexBufferMemory_, 0, VK_WHOLE_SIZE, 0, (void**)&vertexMapped_) != VK_SUCCESS) {
+            throw std::runtime_error("failed to map vertex buffer memory for overlay update ");
+        }
+
+        assert(vertexMapped_ != nullptr);
+
+        vertexCount = renderableManager_.mapAll(vertexMapped_);
+
+        // points should be divisible by 4 no remainder
+        if (vertexCount % 4 != 0) {
+            throw std::runtime_error("game pointCount not divisible by 4, pointCount % 4 = " + std::to_string(vertexCount % 4));
+        }
+
+        // vertex buffer
+        vkUnmapMemory(device_, vertexBufferMemory_);
+        vertexMapped_ = nullptr;
+
+        // INDEX MAPPING ---------------------------------------<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+        // populate index buffer
+        if (vkMapMemory(device_, indexBufferMemory_, 0, VK_WHOLE_SIZE, 0, (void**)&indexMapped_) != VK_SUCCESS) {
+            throw std::runtime_error("failed to map index buffer memory for overlay update ");
+        }
+
+        assert(indexMapped_ != nullptr);
+
+        std::vector<int> indices = { 0,1,2,2,1,3 };
+        for (int i = 0; i < vertexCount / 4; i++) {
+            for (int j = 0; j < indices.size(); j++) {
+                *indexMapped_ = (indices[j] + (4 * i));
+                indexMapped_++;
+                indexCount_++;
+            }
+        }
+
+        vkUnmapMemory(device_, indexBufferMemory_);
+        indexMapped_ = nullptr;
+
+        // reset state
+        state_.needTriangleRemap = false;
+    }
 }
 
 void Engine::renderWorld() {
