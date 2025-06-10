@@ -1,5 +1,8 @@
 #include "player.h"
 
+/*
+-----~~~~~=====<<<<<{_INITIALIZATION_}>>>>>=====~~~~~-----
+*/
 void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercent, int textureIndex) {
 	gameState_ = &gameState;
 
@@ -34,6 +37,13 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 	vertices_[3].texCoord = { 1, 1 };
 	vertices_[3].texIndex = textureIndex_;
 	vertices_[3].interaction = 0;
+}
+
+/*
+-----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
+*/
+void Player::update() {
+
 }
 
 int Player::map(Vertex* mapped) {
@@ -76,8 +86,13 @@ void Player::onKey() {
 		position_ = {0,0};
 	}
 	scale();
+
+	log("DEBUG", "gameState_->simulationTimeDelta" + std::to_string(gameState_->simulationTimeDelta));
 }
 
+/*
+-----~~~~~=====<<<<<{_CLEANUP_}>>>>>=====~~~~~-----
+*/
 void Player::cleanup() {
 
 }

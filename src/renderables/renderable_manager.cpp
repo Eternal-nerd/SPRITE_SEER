@@ -33,6 +33,11 @@ void RenderableManager::generateWorld() {
 /*
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
+void RenderableManager::updateAll() {
+	// for now, just update player
+	player_.update();
+}
+
 int RenderableManager::mapAll(Vertex* mapped) {
 	//log(name_ + __func__, "Mapping everything to the buffer");
 

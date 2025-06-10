@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <array>
 #include <algorithm>
+#include <chrono>
 
 #include <iostream>
 #include <set>
@@ -138,6 +139,11 @@ struct GameState {
 
     // keys
     KeyState keys{};
+
+    // time
+    std::chrono::time_point<std::chrono::high_resolution_clock> programStartTime;
+    float currentSimulationTime = 0.f;
+    float simulationTimeDelta = 0.f;
 
     bool needTriangleRemap = true;
     bool needLineRemap = true;

@@ -18,6 +18,9 @@ void Engine::run() {
 void Engine::init() {
     log(name_ + __func__, "initializing engine");
     
+    // start clock
+    state_.programStartTime = std::chrono::high_resolution_clock::now();
+
     // init vulkan/SDL
     initSDL();
     initVulkan();
@@ -32,21 +35,25 @@ void Engine::init() {
     // init renderables
     renderableManager_.init(state_, assetManager_);
 
+    // init simulation time delta
+    auto simStartTime = std::chrono::high_resolution_clock::now();
+    state_.currentSimulationTime = std::chrono::duration<float, std::chrono::seconds::period>(simStartTime - state_.programStartTime).count();
+    state_.simulationTimeDelta = 0.f;
+
 }
 
 // executes repeatedly until a stop event is detected
 void Engine::mainLoop() {
     log(name_ + __func__, "executing engine main loop");
-    
-    std::chrono::time_point<std::chrono::high_resolution_clock> loopStart = std::chrono::high_resolution_clock::now();
 
     running_ = true;
     while (running_) {
         auto startTime = std::chrono::high_resolution_clock::now();
-	    float frameStart = std::chrono::duration<float, std::chrono::seconds::period>(startTime - loopStart).count();
+	    float frameStart = std::chrono::duration<float, std::chrono::seconds::period>(startTime - state_.programStartTime).count();
  
         handleEvents();
         waitForFrame();
+        stepSimulation();
         updateBuffers();
 
         if (visible_) {
@@ -58,7 +65,7 @@ void Engine::mainLoop() {
         //std::this_thread::sleep_for(std::chrono::milliseconds(100));
         //std::cout << "------------FRAME-----------------\n";
         auto endTime = std::chrono::high_resolution_clock::now();
-	    float frameEnd = std::chrono::duration<float, std::chrono::seconds::period>(endTime - loopStart).count();
+	    float frameEnd = std::chrono::duration<float, std::chrono::seconds::period>(endTime - state_.programStartTime).count();
 
         fpsTime_ += frameEnd - frameStart;
         loopsMeasured_++;
@@ -956,6 +963,17 @@ void Engine::waitForFrame() {
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
+}
+
+void Engine::stepSimulation() {
+    // update simulation time delta
+    auto newCurrentSimulationTime = std::chrono::high_resolution_clock::now();
+    // first, update the delta using the old time
+    float currentTime = std::chrono::duration<float, std::chrono::seconds::period>(newCurrentSimulationTime - state_.programStartTime).count();
+    state_.simulationTimeDelta = currentTime - state_.currentSimulationTime;
+    // update the current sim time
+    state_.currentSimulationTime = currentTime;
+    renderableManager_.updateAll();
 }
 
 void Engine::updateBuffers() {

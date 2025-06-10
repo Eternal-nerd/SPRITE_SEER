@@ -11,6 +11,8 @@ public:
 	// -----~~~~~=====<<<<<{_METHODS_}>>>>>=====~~~~~-----
 	void init(GameState& gameState, AssetManager& assetManager);
 
+	void updateAll();
+
 	int mapAll(Vertex* mapped);
 
 	void scale();

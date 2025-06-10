@@ -12,7 +12,6 @@
 #include <set>
 #include <stdexcept>
 #include <thread>
-#include <chrono>
 
 // includes from project
 #include "util.h"
@@ -54,6 +53,7 @@ private:
     void handleEvents(); // input handling step
 	void handleKeyEvent();
 	void waitForFrame();
+	void stepSimulation();
 	void updateBuffers(); // updating buffers with new vertex data based on sim (MAYBE USE UNIFORM BUFFER INSTEAD??)
 	void renderWorld(); // makes vk command buffer, draws everything, submits command buffer
 
