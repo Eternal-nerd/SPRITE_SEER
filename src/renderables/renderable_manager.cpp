@@ -17,12 +17,12 @@ void RenderableManager::generateWorld() {
 
 	// sky
 	Rectangle sky;
-	sky.create(*gameState_, GAMEPLAY, false, "sky", { -1.f, -1.f }, { 1.f, 1.f }, assetManager_->getTextureIndex("../res/img/png/sky.png"));
+	sky.create(*gameState_, GAMEPLAY, false, "sky", { -1.f, -1.f }, { 1.f, 1.f }, assetManager_->getTextureIndex("../res/img/png/sky2.png"));
 	rectangles_.push_back(sky);
 
 	// floor
 	Rectangle floor;
-	floor.create(*gameState_, GAMEPLAY, true, "floor", { -1.f, 0.75f }, { 1.f, 0.125f }, assetManager_->getTextureIndex("../res/img/png/floor.png"));
+	floor.create(*gameState_, GAMEPLAY, true, "floor", { -1.f, 0.75f }, { 1.f, 0.125f }, assetManager_->getTextureIndex("../res/img/png/floor2.png"));
 	rectangles_.push_back(floor);
 
 

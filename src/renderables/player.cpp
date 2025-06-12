@@ -43,7 +43,13 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
+	// update position based on velocity
+	position_.x += velocity_.x * gameState_->simulationTimeDelta*100;
+	position_.y += velocity_.y * gameState_->simulationTimeDelta*100;
 
+	scale();
+
+	gameState_->needTriangleRemap = true;
 }
 
 int Player::map(Vertex* mapped) {
@@ -79,15 +85,32 @@ void Player::scale() {
 }
 
 void Player::onKey() {
-	if (gameState_->keys.w) {
-		position_ = {0,0.1};
+	if (gameState_->keys.w && !gameState_->keys.s) {
+		velocity_.y -= gameState_->simulationTimeDelta;
 	}
-	else {
-		position_ = {0,0};
+	if (gameState_->keys.s && !gameState_->keys.w) {
+		velocity_.y += gameState_->simulationTimeDelta;
 	}
-	scale();
+	if ((gameState_->keys.s && gameState_->keys.w) || (!gameState_->keys.s && !gameState_->keys.w)) {
+		velocity_.y = 0;
+	}
+	if (gameState_->keys.d && !gameState_->keys.a) {
+		velocity_.x += gameState_->simulationTimeDelta;
+	}
+	if (gameState_->keys.a && !gameState_->keys.d) {
+		velocity_.x -= gameState_->simulationTimeDelta;
+	}
+	if ((gameState_->keys.a && gameState_->keys.d) || (!gameState_->keys.a && !gameState_->keys.d)) {
+		velocity_.x = 0;
+	}
 
-	log("DEBUG", "gameState_->simulationTimeDelta" + std::to_string(gameState_->simulationTimeDelta));
+	if (velocity_.x > MAX_PLAYER_VELOCITY) {
+		velocity_.x = MAX_PLAYER_VELOCITY;
+	}
+
+	if (velocity_.y > MAX_PLAYER_VELOCITY) {
+		velocity_.y = MAX_PLAYER_VELOCITY;
+	}
 }
 
 /*
