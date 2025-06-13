@@ -29,6 +29,7 @@ private:
 	GameState* gameState_ = nullptr;
 
 	int textureIndex_ = -1;
+    glm::vec2 acceleration_ = { 0.f, 0.f };
 	glm::vec2 velocity_ = { 0.f, 0.f };
 	glm::vec2 position_ = { 0.f, 0.f };
 	glm::vec2 sizePercent_ = { 0.f, 0.f };

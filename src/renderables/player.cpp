@@ -43,9 +43,21 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
+    // calculate velocity
+    velocity_.x = velocity_.x + acceleration_.x * gameState_->simulationTimeDelta;
+
 	// update position based on velocity
-	position_.x += velocity_.x * gameState_->simulationTimeDelta*100;
-	position_.y += velocity_.y * gameState_->simulationTimeDelta*100;
+	position_.x += velocity_.x;
+	position_.y += velocity_.y;
+
+    // limit velocity
+    if (velocity_.y > MAX_PLAYER_VELOCITY || velocity_.y < -MAX_PLAYER_VELOCITY) {
+		velocity_.y = MAX_PLAYER_VELOCITY;
+    }
+
+   	if (velocity_.x > MAX_PLAYER_VELOCITY || velocity_.x < -MAX_PLAYER_VELOCITY) {
+		velocity_.x = MAX_PLAYER_VELOCITY;
+    }
 
 	scale();
 
@@ -86,30 +98,22 @@ void Player::scale() {
 
 void Player::onKey() {
 	if (gameState_->keys.w && !gameState_->keys.s) {
-		velocity_.y -= gameState_->simulationTimeDelta;
+		acceleration_.y -= gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
 	}
 	if (gameState_->keys.s && !gameState_->keys.w) {
-		velocity_.y += gameState_->simulationTimeDelta;
+		acceleration_.y += gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
 	}
 	if ((gameState_->keys.s && gameState_->keys.w) || (!gameState_->keys.s && !gameState_->keys.w)) {
-		velocity_.y = 0;
+		acceleration_.y = 0;
 	}
 	if (gameState_->keys.d && !gameState_->keys.a) {
-		velocity_.x += gameState_->simulationTimeDelta;
+		acceleration_.x += gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
 	}
 	if (gameState_->keys.a && !gameState_->keys.d) {
-		velocity_.x -= gameState_->simulationTimeDelta;
+		acceleration_.x -= gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
 	}
 	if ((gameState_->keys.a && gameState_->keys.d) || (!gameState_->keys.a && !gameState_->keys.d)) {
-		velocity_.x = 0;
-	}
-
-	if (velocity_.x > MAX_PLAYER_VELOCITY) {
-		velocity_.x = MAX_PLAYER_VELOCITY;
-	}
-
-	if (velocity_.y > MAX_PLAYER_VELOCITY) {
-		velocity_.y = MAX_PLAYER_VELOCITY;
+		acceleration_.x = 0;
 	}
 }
 
