@@ -37,7 +37,7 @@ const int MAX_QUADS = 2048;
 const int MAX_LINES = 256;
 const int UNIT_PIXELS = 10;
 const float PLAYER_ACCELERATION = 10.f; // units/second
-const float MAX_PLAYER_VELOCITY = 10.f;
+const float MAX_PLAYER_VELOCITY = 0.01f;
 
 // GAME VARIABLES
 

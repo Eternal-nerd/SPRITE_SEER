@@ -43,12 +43,18 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
-    // calculate velocity
-    velocity_.x = velocity_.x + acceleration_.x * gameState_->simulationTimeDelta;
+    // if acceleration is 0, but velocity is not then decelerate
+    if (velocity_ != glm::vec2(0.f,0.f) && acceleration_ == glm::vec2(0.f,0.f)) {
+        if (velocity_.x > 0.f) {
+            //acceleration_.x = gameState_->simulationTimeDelta * -PLAYER_ACCELERATION;
+        }
+        else if (velocity_.x < 0.f) {
+            //acceleration_.x = gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
+        }
+    }
 
-	// update position based on velocity
-	position_.x += velocity_.x;
-	position_.y += velocity_.y;
+    // calculate velocity
+    velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta};;
 
     // limit velocity
     if (velocity_.y > MAX_PLAYER_VELOCITY || velocity_.y < -MAX_PLAYER_VELOCITY) {
@@ -58,6 +64,40 @@ void Player::update() {
    	if (velocity_.x > MAX_PLAYER_VELOCITY || velocity_.x < -MAX_PLAYER_VELOCITY) {
 		velocity_.x = MAX_PLAYER_VELOCITY;
     }
+
+	// update position based on velocity
+	position_ += glm::vec2(velocity_.x, velocity_.y);
+
+    // edge of screen collision x
+    if (position_.x <= -1.f || position_.x >= (1.f - (sizePercent_.x * 2) * gameState_->spriteScale)) { 
+        // reset velocity and acceleration
+        velocity_.x = 0.f;
+        acceleration_.x = 0.f;
+       
+        // limit position
+        if (position_.x < 0.f) {
+            position_.x = -1.f;
+        }
+        else {
+            position_.x = 1.f - (sizePercent_.x * 2) * gameState_->spriteScale;
+        }
+    }
+
+    // edge of screen collision y
+    if (position_.y <= -1.f || position_.y >= (1.f - (sizePercent_.y * 2) * gameState_->spriteScale)) { 
+        // reset velocity and acceleration
+        velocity_.y = 0.f;
+        acceleration_.y = 0.f;
+       
+        // limit position
+        if (position_.y < 0.f) {
+            position_.y = -1.f;
+        }
+        else {
+            position_.y = 1.f - (sizePercent_.y * 2) * gameState_->spriteScale;
+        }
+    }
+
 
 	scale();
 
