@@ -49,9 +49,6 @@ void Player::update() {
         //acceleration_.x = (velocity_.x < 0.f) ? -PLAYER_ACCELERATION : PLAYER_ACCELERATION;
     }
 
-    // calculate velocity
-    velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta};;
-
     // FIXME just STOPPING velocity if no input
     if (acceleration_ == glm::vec2(0.f,0.f)) {
         velocity_ = {0.f,0.f};
@@ -64,6 +61,9 @@ void Player::update() {
     if (velocity_.y > MAX_PLAYER_VELOCITY || velocity_.y < -MAX_PLAYER_VELOCITY) {
 		velocity_.y = (velocity_.y < 0.f) ? -MAX_PLAYER_VELOCITY : MAX_PLAYER_VELOCITY;
     }
+
+    // calculate velocity
+    velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta};;
 
 	// update position based on velocity
 	position_ += glm::vec2(velocity_.x, velocity_.y);
