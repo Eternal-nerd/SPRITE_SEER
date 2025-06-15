@@ -36,8 +36,8 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 const int MAX_QUADS = 2048;
 const int MAX_LINES = 256;
 const int UNIT_PIXELS = 10;
-const float PLAYER_ACCELERATION = 10.f; // units/second
-const float MAX_PLAYER_VELOCITY = 0.01f;
+const float PLAYER_ACCELERATION = 5.f;
+const float MAX_PLAYER_VELOCITY = 0.001f;
 
 // GAME VARIABLES
 

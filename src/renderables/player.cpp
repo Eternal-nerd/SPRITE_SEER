@@ -43,26 +43,26 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
-    // if acceleration is 0, but velocity is not then decelerate
-    if (velocity_ != glm::vec2(0.f,0.f) && acceleration_ == glm::vec2(0.f,0.f)) {
-        if (velocity_.x > 0.f) {
-            //acceleration_.x = gameState_->simulationTimeDelta * -PLAYER_ACCELERATION;
-        }
-        else if (velocity_.x < 0.f) {
-            //acceleration_.x = gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
-        }
+    // decelerate if no input and there is still velocity
+    // TODO FIXME
+    if (acceleration_.x == 0.f && velocity_.x != 0.f) {
+        //acceleration_.x = (velocity_.x < 0.f) ? -PLAYER_ACCELERATION : PLAYER_ACCELERATION;
     }
 
     // calculate velocity
     velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta};;
 
-    // limit velocity
-    if (velocity_.y > MAX_PLAYER_VELOCITY || velocity_.y < -MAX_PLAYER_VELOCITY) {
-		velocity_.y = MAX_PLAYER_VELOCITY;
+    // FIXME just STOPPING velocity if no input
+    if (acceleration_ == glm::vec2(0.f,0.f)) {
+        velocity_ = {0.f,0.f};
     }
 
-   	if (velocity_.x > MAX_PLAYER_VELOCITY || velocity_.x < -MAX_PLAYER_VELOCITY) {
-		velocity_.x = MAX_PLAYER_VELOCITY;
+    // limit velocity
+    if (velocity_.x > MAX_PLAYER_VELOCITY || velocity_.x < -MAX_PLAYER_VELOCITY) {
+		velocity_.x = (velocity_.x < 0.f) ? -MAX_PLAYER_VELOCITY : MAX_PLAYER_VELOCITY;
+    }
+    if (velocity_.y > MAX_PLAYER_VELOCITY || velocity_.y < -MAX_PLAYER_VELOCITY) {
+		velocity_.y = (velocity_.y < 0.f) ? -MAX_PLAYER_VELOCITY : MAX_PLAYER_VELOCITY;
     }
 
 	// update position based on velocity
@@ -97,7 +97,6 @@ void Player::update() {
             position_.y = 1.f - (sizePercent_.y * 2) * gameState_->spriteScale;
         }
     }
-
 
 	scale();
 
