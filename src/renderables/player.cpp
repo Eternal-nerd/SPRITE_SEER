@@ -43,6 +43,8 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
+    // TODO - SCALE VELOCITY WITH TIME BEFORE UPDATE POSITION...
+
     // decelerate if no input and there is still velocity
     // TODO FIXME
     if (acceleration_.x == 0.f && velocity_.x != 0.f) {
