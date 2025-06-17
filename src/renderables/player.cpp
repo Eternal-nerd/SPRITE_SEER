@@ -4,6 +4,8 @@
 -----~~~~~=====<<<<<{_INITIALIZATION_}>>>>>=====~~~~~-----
 */
 void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercent, int textureIndex) {
+	log(name_ + __func__, "init player");
+	
 	gameState_ = &gameState;
 
 	position_ = position;
@@ -43,30 +45,37 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
-    // if acceleration is 0, but velocity is not then decelerate
-    if (velocity_ != glm::vec2(0.f,0.f) && acceleration_ == glm::vec2(0.f,0.f)) {
-        if (velocity_.x > 0.f) {
-            //acceleration_.x = gameState_->simulationTimeDelta * -PLAYER_ACCELERATION;
-        }
-        else if (velocity_.x < 0.f) {
-            //acceleration_.x = gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
-        }
-    }
+    // deceleration
+	if (noX_) {
+		if (velocity_.x < 0.f) {
+			acceleration_.x = PLAYER_DECELERATION;
+		}
+		if (velocity_.x > 0) {
+			acceleration_.x = -PLAYER_DECELERATION;
+		}
+	}
 
-    // calculate velocity
-    velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta};;
+    // calculate velocity & add gravity
+	// FIXME THIS SUCKS
+    velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta + PLAYER_GRAVITY * gameState_->simulationTimeDelta };;
 
     // limit velocity
-    if (velocity_.y > MAX_PLAYER_VELOCITY || velocity_.y < -MAX_PLAYER_VELOCITY) {
+    if (velocity_.y > MAX_PLAYER_VELOCITY) {
 		velocity_.y = MAX_PLAYER_VELOCITY;
     }
+	if (velocity_.y < -MAX_PLAYER_VELOCITY) {
+		velocity_.y = -MAX_PLAYER_VELOCITY;
+	}
 
-   	if (velocity_.x > MAX_PLAYER_VELOCITY || velocity_.x < -MAX_PLAYER_VELOCITY) {
+   	if (velocity_.x > MAX_PLAYER_VELOCITY) {
 		velocity_.x = MAX_PLAYER_VELOCITY;
     }
+	if (velocity_.x < -MAX_PLAYER_VELOCITY) {
+		velocity_.x = -MAX_PLAYER_VELOCITY;
+	}
 
 	// update position based on velocity
-	position_ += glm::vec2(velocity_.x, velocity_.y);
+	position_ += glm::vec2(velocity_.x * gameState_->simulationTimeDelta, velocity_.y * gameState_->simulationTimeDelta);
 
     // edge of screen collision x
     if (position_.x <= -1.f || position_.x >= (1.f - (sizePercent_.x * 2) * gameState_->spriteScale)) { 
@@ -92,12 +101,12 @@ void Player::update() {
         // limit position
         if (position_.y < 0.f) {
             position_.y = -1.f;
-        }
+		}
         else {
             position_.y = 1.f - (sizePercent_.y * 2) * gameState_->spriteScale;
-        }
+			airborne_ = false;
+		}
     }
-
 
 	scale();
 
@@ -137,23 +146,28 @@ void Player::scale() {
 }
 
 void Player::onKey() {
-	if (gameState_->keys.w && !gameState_->keys.s) {
-		acceleration_.y -= gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
+	if (gameState_->keys.w && !gameState_->keys.s && !airborne_) {
+		acceleration_.y = -PLAYER_JUMP_ACCELERATION;
+		noY_ = false;
+		airborne_ = true;
 	}
 	if (gameState_->keys.s && !gameState_->keys.w) {
-		acceleration_.y += gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
+		//acceleration_.y = PLAYER_ACCELERATION;
+		noY_ = false;
 	}
 	if ((gameState_->keys.s && gameState_->keys.w) || (!gameState_->keys.s && !gameState_->keys.w)) {
-		acceleration_.y = 0;
+		noY_ = true;
 	}
 	if (gameState_->keys.d && !gameState_->keys.a) {
-		acceleration_.x += gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
+		acceleration_.x = PLAYER_ACCELERATION;
+		noX_ = false;
 	}
 	if (gameState_->keys.a && !gameState_->keys.d) {
-		acceleration_.x -= gameState_->simulationTimeDelta * PLAYER_ACCELERATION;
+		acceleration_.x = -PLAYER_ACCELERATION;
+		noX_ = false;
 	}
 	if ((gameState_->keys.a && gameState_->keys.d) || (!gameState_->keys.a && !gameState_->keys.d)) {
-		acceleration_.x = 0;
+		noX_ = true;
 	}
 }
 

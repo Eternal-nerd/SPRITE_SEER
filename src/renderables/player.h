@@ -28,6 +28,10 @@ private:
 
 	GameState* gameState_ = nullptr;
 
+	bool noX_ = true;
+	bool noY_ = true;
+	bool airborne_ = true;
+
 	int textureIndex_ = -1;
     glm::vec2 acceleration_ = { 0.f, 0.f };
 	glm::vec2 velocity_ = { 0.f, 0.f };
