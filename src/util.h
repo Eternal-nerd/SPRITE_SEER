@@ -36,9 +36,9 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 const int MAX_QUADS = 2048;
 const int MAX_LINES = 256;
 const float PLAYER_ACCELERATION = 1.f; 
-const float PLAYER_DECELERATION = 3.f;
-const float PLAYER_GRAVITY = 10.f;
-const float PLAYER_JUMP_ACCELERATION = 50.f;
+const float PLAYER_DECELERATION = 5.f;
+const float PLAYER_GRAVITY = 50.f;
+const float PLAYER_JUMP_VELOCITY = 10000.f;
 const float MAX_PLAYER_VELOCITY = 2.f;
 
 

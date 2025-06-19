@@ -45,19 +45,16 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 -----~~~~~=====<<<<<{_UPDATES_}>>>>>=====~~~~~-----
 */
 void Player::update() {
-    // deceleration
+    // decceleration
 	if (noX_) {
-		if (velocity_.x < 0.f) {
-			acceleration_.x = PLAYER_DECELERATION;
-		}
-		if (velocity_.x > 0) {
-			acceleration_.x = -PLAYER_DECELERATION;
-		}
+		acceleration_.x += (velocity_.x < 0.f) ? PLAYER_DECELERATION * gameState_->simulationTimeDelta : -PLAYER_DECELERATION * gameState_->simulationTimeDelta;
 	}
 
+	// add gravity
+	acceleration_.y += (airborne_) ? PLAYER_GRAVITY * gameState_->simulationTimeDelta : 0.f;
+
     // calculate velocity & add gravity
-	// FIXME THIS SUCKS
-    velocity_ = {velocity_.x + acceleration_.x * gameState_->simulationTimeDelta, velocity_.y + acceleration_.y * gameState_->simulationTimeDelta + PLAYER_GRAVITY * gameState_->simulationTimeDelta };;
+    velocity_ += glm::vec2(acceleration_.x * gameState_->simulationTimeDelta, acceleration_.y * gameState_->simulationTimeDelta);
 
     // limit velocity
     if (velocity_.y > MAX_PLAYER_VELOCITY) {
@@ -96,17 +93,19 @@ void Player::update() {
     if (position_.y <= -1.f || position_.y >= (1.f - (sizePercent_.y * 2) * gameState_->spriteScale)) { 
         // reset velocity and acceleration
         velocity_.y = 0.f;
-        acceleration_.y = 0.f;
-       
+
         // limit position
         if (position_.y < 0.f) {
             position_.y = -1.f;
 		}
         else {
             position_.y = 1.f - (sizePercent_.y * 2) * gameState_->spriteScale;
+			acceleration_.y = 0.f;
 			airborne_ = false;
 		}
     }
+
+	log("DEBUG", "accel.x: " + std::to_string(acceleration_.x));
 
 	scale();
 
@@ -146,8 +145,8 @@ void Player::scale() {
 }
 
 void Player::onKey() {
-	if (gameState_->keys.w && !gameState_->keys.s && !airborne_) {
-		acceleration_.y = -PLAYER_JUMP_ACCELERATION;
+	if ((gameState_->keys.w || gameState_->keys.space) && !gameState_->keys.s && !airborne_) {
+		velocity_.y = -PLAYER_JUMP_VELOCITY;
 		noY_ = false;
 		airborne_ = true;
 	}
