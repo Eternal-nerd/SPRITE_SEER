@@ -22,7 +22,7 @@ void RenderableManager::generateWorld() {
 
 	// floor
 	Rectangle floor;
-	floor.create(*gameState_, GAMEPLAY, true, "floor", { -1.f, 0.75f }, { 1.f, 0.125f }, assetManager_->getTextureIndex("../res/img/png/floor2.png"));
+	floor.create(*gameState_, GAMEPLAY, true, "floor", { -1.f, 0.75f }, { 1.f, 0.125f }, assetManager_->getTextureIndex("../res/img/png/floor.png"));
 	rectangles_.push_back(floor);
 
 

@@ -47,8 +47,10 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 void Player::update() {
     // decceleration
 	if (noX_) {
-		acceleration_.x += (velocity_.x < 0.f) ? PLAYER_DECELERATION * gameState_->simulationTimeDelta : -PLAYER_DECELERATION * gameState_->simulationTimeDelta;
-	}
+        // FIXME
+        acceleration_.x = 0;
+        velocity_.x = 0;
+    }
 
 	// add gravity
 	acceleration_.y += (airborne_) ? PLAYER_GRAVITY * gameState_->simulationTimeDelta : 0.f;
@@ -105,7 +107,7 @@ void Player::update() {
 		}
     }
 
-	log("DEBUG", "accel.x: " + std::to_string(acceleration_.x));
+	//log("DEBUG", "accel.x: " + std::to_string(acceleration_.x));
 
 	scale();
 
