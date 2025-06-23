@@ -46,19 +46,37 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 */
 void Player::update() {
     // decceleration
-	if (noX_) {
+	if (noX_ && !stopped_) {
         if (velocity_.x < 0.f) {
-            acceleration_.x = PLAYER_DECELERATION;
+            // check if stop
+            if (velocity_.x + (PLAYER_DECELERATION * gameState_->simulationTimeDelta) >= 0) {
+                stopped_ = true;
+            }
+            else {
+                 acceleration_.x = PLAYER_DECELERATION;
+            }
         }
         if (velocity_.x > 0.f) {
-            acceleration_.x = -PLAYER_DECELERATION;
+            // check if stop
+            if (velocity_.x - (PLAYER_DECELERATION * gameState_->simulationTimeDelta) <= 0) {
+                stopped_ = true;
+            }
+            else {
+                 acceleration_.x = -PLAYER_DECELERATION;
+            }
         }
     }
-
+    
+    // on x stop 
+    if (stopped_) {
+        acceleration_.x = 0.f;
+        velocity_.x = 0.f;
+    }
+        
 	// add gravity
 	acceleration_.y += (airborne_) ? PLAYER_GRAVITY * gameState_->simulationTimeDelta : 0.f;
 
-    // calculate velocity & add gravity
+    // calculate velocity
     velocity_ += glm::vec2(acceleration_.x * gameState_->simulationTimeDelta, acceleration_.y * gameState_->simulationTimeDelta);
 
     // limit velocity
@@ -110,10 +128,6 @@ void Player::update() {
 		}
     }
 
-
-	log("DEBUG", "vel.x: " + std::to_string(velocity_.x));
-	//log("DEBUG", "accel.x: " + std::to_string(acceleration_.x));
-	
     scale();
 
 	gameState_->needTriangleRemap = true;
@@ -167,14 +181,19 @@ void Player::onKey() {
 	if (gameState_->keys.d && !gameState_->keys.a) {
 		acceleration_.x = PLAYER_ACCELERATION;
 		noX_ = false;
+        stopped_ = false;
 	}
 	if (gameState_->keys.a && !gameState_->keys.d) {
 		acceleration_.x = -PLAYER_ACCELERATION;
 		noX_ = false;
+        stopped_ = false;
 	}
-	if ((gameState_->keys.a && gameState_->keys.d) || (!gameState_->keys.a && !gameState_->keys.d)) {
+	if (!gameState_->keys.a && !gameState_->keys.d) {
 		noX_ = true;
 	}
+    if (gameState_->keys.a && gameState_->keys.d) {
+        stopped_ = true;
+    }
 }
 
 /*

@@ -37,8 +37,8 @@ const int MAX_QUADS = 2048;
 const int MAX_LINES = 256;
 const float PLAYER_ACCELERATION = 1.f; 
 const float PLAYER_DECELERATION = 3.f;
-const float PLAYER_GRAVITY = 40.f;
-const float PLAYER_JUMP_VELOCITY = 2.f;
+const float PLAYER_GRAVITY = 50.f;
+const float PLAYER_JUMP_VELOCITY = 3.f;
 const float MAX_PLAYER_VELOCITY = 3.f;
 
 

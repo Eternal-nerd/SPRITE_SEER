@@ -31,6 +31,7 @@ private:
 	bool noX_ = true;
 	bool noY_ = true;
 	bool airborne_ = true;
+    bool stopped_ = false;
 
 	int textureIndex_ = -1;
     glm::vec2 acceleration_ = { 0.f, 0.f };
