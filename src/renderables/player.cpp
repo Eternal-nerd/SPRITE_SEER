@@ -47,9 +47,12 @@ void Player::init(GameState& gameState, glm::vec2 position, glm::vec2 sizePercen
 void Player::update() {
     // decceleration
 	if (noX_) {
-        // FIXME
-        acceleration_.x = 0;
-        velocity_.x = 0;
+        if (velocity_.x < 0.f) {
+            acceleration_.x = PLAYER_DECELERATION;
+        }
+        if (velocity_.x > 0.f) {
+            acceleration_.x = -PLAYER_DECELERATION;
+        }
     }
 
 	// add gravity
@@ -107,9 +110,11 @@ void Player::update() {
 		}
     }
 
-	//log("DEBUG", "accel.x: " + std::to_string(acceleration_.x));
 
-	scale();
+	log("DEBUG", "vel.x: " + std::to_string(velocity_.x));
+	//log("DEBUG", "accel.x: " + std::to_string(acceleration_.x));
+	
+    scale();
 
 	gameState_->needTriangleRemap = true;
 }
